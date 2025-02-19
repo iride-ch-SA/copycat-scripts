@@ -15,3 +15,5 @@ winget install --id Git.Git -e --source winget
 git clone https://github.com/iride-ch-SA/copycat-scripts.git C:\Admin\Scripts
 C:\Admin\Scripts\cats-prepare.bat
 ```
+
+Add *template* for a clean run on VM templates to the cats-prepare.bat script
