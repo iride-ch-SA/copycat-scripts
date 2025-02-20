@@ -6,7 +6,7 @@ winget install VideoLAN.VLC --accept-package-agreements --accept-source-agreemen
 
 REM *** Install Office via Deployment Tool
 winget install Microsoft.OfficeDeploymentTool --accept-package-agreements --accept-source-agreements
-"C:\Program Files\OfficeDeploymentTool\setup.exe" /configure C:\Admin\Scripts\office.xml
+"C:\Program Files\OfficeDeploymentTool\setup.exe" /configure C:\Admin\Scripts\config\office.xml
 
 REM **** Install Remote Support tool
 REM *** Download fresh version of Support Assistant Tool
