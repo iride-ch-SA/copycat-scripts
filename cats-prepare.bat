@@ -28,3 +28,6 @@ REM **** Install Powershell Windows Updates tool
 powershell -command "Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force"
 powershell -command "Install-Module PSWindowsUpdate -Force"
 powershell -command "Set-PSRepository -Name 'PSGallery' -InstallationPolicy Trusted"
+
+REM **** Set a sagerun:1 (TODO: create REGISTRY ADD to do unattended)
+cleanmgr /sageset:1

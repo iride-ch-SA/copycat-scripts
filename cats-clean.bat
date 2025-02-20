@@ -3,16 +3,10 @@ setlocal enabledelayedexpansion
 set "do-restart=0"
 
 for %%a in (%*) do (
-	if /I "%%a"=="win-updates" (
-		REM **** Clean Windows updates
-		net stop wuauserv
-		net stop bits
-		del /f /s /q %windir%\SoftwareDistribution\*
-		net start wuauserv
-		net start bits
-		set "dorestart=1"
+	if /I "%%a"=="clean" (
+		cleanmgr /sagerun:1
 	)
-	
+		
 	if /I "%%a"=="sfc" (
 		sfc /scannow
 	)
@@ -29,6 +23,16 @@ for %%a in (%*) do (
 		timeout /t 5 /nobreak >nul
 		powershell -noprofile -executionpolicy bypass -command "Get-NetConnectionProfile | Set-NetConnectionProfile -NetworkCategory Private"
 	)
+	
+	if /I "%%a"=="win-updates" (
+		REM **** Clean Windows updates
+		net stop wuauserv
+		net stop bits
+		del /f /s /q %windir%\SoftwareDistribution\*
+		net start wuauserv
+		net start bits
+		set "dorestart=1"
+	)
 )
 
 if "!dorestart!"=="1" ( 
@@ -36,6 +40,3 @@ if "!dorestart!"=="1" (
 	pause
 	shutdown /r /t 0 
 )
-
-
-
