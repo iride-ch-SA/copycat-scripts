@@ -14,6 +14,9 @@ mkdir C:\Admin\Drivers
 mkdir C:\Admin\Installers
 mkdir C:\Admin\Others
 
+REM **** Add Apps
+C:\Users\itadmin>winget install Microsoft.Sysinternals.BGInfo --location C:\Admin\Apps\
+
 REM **** Disable Widgets in menu bar (for all users)
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Dsh" /t REG_DWORD /v AllowNewsAndInterests /d "0" /f
 
