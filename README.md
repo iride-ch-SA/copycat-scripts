@@ -34,4 +34,7 @@ Add *template* for a clean run on VM templates to the cats-prepare.bat script
   - Adobe Acrobat Reader (64bit)
   - VideoLAN VLC
   - Office 365 (it-it, 64bit)
-- support: Install Remote Support Tool   
+- support: Install Remote Support Tool
+- intelnuc:
+  - Add Ethernet Drivers to Windows
+  - Install Intel Driver and Support Assistant
