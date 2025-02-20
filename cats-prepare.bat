@@ -14,11 +14,7 @@ mkdir C:\Admin\Others
 REM **** Disable Widgets in menu bar (for all users)
 reg add "HKLM\SOFTWARE\Policies\Microsoft\Dsh" /t REG_DWORD /v AllowNewsAndInterests /d "0" /f
 
-REM **** Change Power Settings
-powercfg /X monitor-timeout-ac 0
-powercfg /X standby-timeout-ac 0
-powercfg /X hibernate-timeout-ac 0
-powercfg /hibernate off
+C:\Admin\Scripts\reset-power-settings.bat
 
 IF /I "%PARAM%"=="template" (
 	REM **** Install Acronis Agent
