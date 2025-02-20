@@ -38,3 +38,8 @@ powershell -command "(new-object System.Net.WebClient).DownloadFile('https://sto
 
 REM *** Create Shortcut for all Users
 Powershell -command "New-Item -ItemType SymbolicLink -Path 'C:\Users\Public\Desktop' -Name 'Supporto IT' -Value 'C:\Admin\Apps\supportoit.exe'"
+
+REM **** Install Powershell Windows Updates tool
+powershell -command "Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force"
+powershell -command "Install-Module PSWindowsUpdate -Force"
+powershell -command "Set-PSRepository -Name 'PSGallery' -InstallationPolicy Trusted"
