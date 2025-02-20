@@ -20,6 +20,7 @@ Add *template* for a clean run on VM templates to the cats-prepare.bat script
 
 ## Scripts
 ### cats-clean.bat [win-updates|sfc|dism-online|network]
+- clean: Do a cleanmgr on sagerun:1
 - win-updates: Clean software distribution by stopping wuauserv
 - sfc: do an sfc /scannow
 - dism-online: Cleanup-Image
