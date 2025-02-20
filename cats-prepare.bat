@@ -4,6 +4,9 @@ SET "PARAM=%~1"
 REM **** Update Scripts
 git --git-dir="C:\Admin\Scripts\.git" --work-tree="C:\Admin\Scripts" pull
 
+REM **** Consent Powershell Scripts
+powershell -Command "Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force"
+
 REM **** Create Standard IT Admin folders in C:
 mkdir C:\Admin
 mkdir C:\Admin\Apps
