@@ -24,3 +24,13 @@ Add *template* for a clean run on VM templates to the cats-prepare.bat script
 - sfc: do an sfc /scannow
 - dism-online: Cleanup-Image
 - network: reset network and set to private
+
+### install-destination-softwares.bat [template|base|support]
+- template: Install Acronis Agent
+- base: Install
+  - Google Chrome
+  - Mozilla Firefox
+  - Adobe Acrobat Reader (64bit)
+  - VideoLAN VLC
+  - Office 365 (it-it, 64bit)
+- support: Install Remote Support Tool   
