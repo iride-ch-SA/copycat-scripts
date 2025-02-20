@@ -1,0 +1,24 @@
+<Configuration>
+  <!-- Forza l’installazione a 64 bit e imposta il canale di aggiornamento, ad es. 'Current' -->
+  <Add OfficeClientEdition="64" Channel="Current">
+	<!-- Product ID tipico per Microsoft 365 Apps for Enterprise/Business -->
+	<Product ID="O365ProPlusRetail">
+	  <!-- Lingua italiana -->
+	  <Language ID="it-it" />
+	  <!-- Esempio: se vuoi escludere Access, Publisher, Teams, aggiungi:
+		   <ExcludeApp ID="Access" />
+		   <ExcludeApp ID="Publisher" />
+		   <ExcludeApp ID="Teams" /> 
+	  -->
+	</Product>
+  </Add>
+
+  <!-- Rimuove eventuali versioni Office (MSI) preesistenti -->
+  <RemoveMSI All="True" />
+
+  <!-- Installazione completamente silenziosa e accetta la licenza -->
+  <Display Level="None" AcceptEULA="TRUE" />
+
+  <!-- Facoltativo: attiva Office automaticamente se associato a un account 365 -->
+  <Property Name="AUTOACTIVATE" Value="1" />
+</Configuration>

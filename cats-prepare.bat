@@ -25,3 +25,10 @@ IF /I "%PARAM%"=="template" (
 	powershell -command "(new-object System.Net.WebClient).DownloadFile('https://storage.googleapis.com/01931185-232c-77a5-8e67-8751490ebf3e/CopyCats/AcronisSnapDeployAgent64.msi','C:\Admin\Installers\AcronisSnapDeployAgent64.msi')"
 	C:\Admin\Installers\AcronisSnapDeployAgent64.msi /quiet
 )
+
+REM **** Install Destination Softwares
+winget install Google.Chrome --accept-package-agreements --accept-source-agreements
+winget install Mozilla.Firefox --accept-package-agreements --accept-source-agreements
+winget install Adobe.Acrobat.Reader.64-bit --accept-package-agreements --accept-source-agreements
+winget install VideoLAN.VLC --accept-package-agreements --accept-source-agreements
+winget install Microsoft.OfficeDeploymentTool --accept-package-agreements --accept-source-agreements
