@@ -1,5 +1,10 @@
+@echo off
+SET "PARAM=%~1"
+
 REM **** Update Scripts Folder
 git --git-dir="C:\Admin\Scripts\.git" --work-tree="C:\Admin\Scripts" pull
+
+IF /I "%PARAM%"=="git-only" ( goto :EOF )
 
 REM **** Do WinGet updates
 winget upgrade --all --accept-package-agreements --accept-source-agreements
