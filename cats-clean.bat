@@ -26,6 +26,7 @@ for %%a in (%*) do (
 	if /I "%%a"=="network" (
 		ipconfig /release & ipconfig /renew
 		ipconfig /flushdns
+		timeout /t 5 /nobreak >nul
 		powershell -noprofile -executionpolicy bypass -command "Get-NetConnectionProfile | Set-NetConnectionProfile -NetworkCategory Private"
 	)
 )
