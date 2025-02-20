@@ -9,10 +9,8 @@ IF /I "%PARAM%"=="git-reset" (
 REM **** Update Scripts Folder
 git --git-dir="C:\Admin\Scripts\.git" --work-tree="C:\Admin\Scripts" pull
 
-set git-param=0
-IF /I "%PARAM%"=="git-only" ( set git-param=1 )
-IF /I "%PARAM%"=="git-reset" ( set git-param=1 )
-IF "%git-param%"=="1" ( goto :EOF )
+IF /I "%PARAM%"=="git-only" ( goto :EOF)
+IF /I "%PARAM%"=="git-reset" ( goto :EOF )
 
 REM **** Do WinGet updates
 winget upgrade --all --accept-package-agreements --accept-source-agreements
