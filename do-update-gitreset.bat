@@ -1,1 +1,1 @@
-C:\Admin\Scripts\do-updates.bat git-only
+C:\Admin\Scripts\do-updates.bat git-reset
