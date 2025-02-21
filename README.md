@@ -37,4 +37,5 @@ Add *template* for a clean run on VM templates to the cats-prepare.bat script
 - support: Install Remote Support Tool
 - intelnuc:
   - Add Ethernet Drivers to Windows
+  - Install Intel NUC Driver Packages
   - Install Intel Driver and Support Assistant
