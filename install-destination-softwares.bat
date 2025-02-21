@@ -28,4 +28,8 @@ or %%a in (%*) do (
 		REM *** Create Shortcut for all Users
 		Powershell -command "New-Item -ItemType SymbolicLink -Path 'C:\Users\Public\Desktop' -Name 'Supporto IT' -Value 'C:\Admin\Apps\supportoit.exe'"
 	)
+	
+	if /I "%%a"=="intelnuc" (
+		winget install Intel.IntelDriverAndSupportAssistant --accept-package-agreements --accept-source-agreements
+	)
 )
