@@ -30,7 +30,6 @@ or %%a in (%*) do (
 	)
 	
 	if /I "%%a"=="intelnuc" (
-		REM **** Install Intel Driver and Support Assistant
 		winget install Intel.IntelDriverAndSupportAssistant --accept-package-agreements --accept-source-agreements		
 	)
 )
