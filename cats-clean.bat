@@ -33,6 +33,11 @@ for %%a in (%*) do (
 		net start bits
 		set "dorestart=1"
 	)
+	
+	if /I "%%a"=="wildcat-deploy" (
+		winget uninstall "Acronis Snap Deploy 6 Management Agent"
+		winget uninstall RedHat.VirtIO
+	)
 )
 
 if "!dorestart!"=="1" ( 
