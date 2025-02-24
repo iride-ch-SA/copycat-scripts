@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 
-or %%a in (%*) do (
+for %%a in (%*) do (
 	f /I "%%a"=="template" (
 		REM **** Install Acronis Agent
 		powershell -command "(new-object System.Net.WebClient).DownloadFile('https://storage.googleapis.com/01931185-232c-77a5-8e67-8751490ebf3e/CopyCats/AcronisSnapDeployAgent64.msi','C:\Admin\Installers\AcronisSnapDeployAgent64.msi')"
