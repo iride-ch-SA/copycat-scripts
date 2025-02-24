@@ -37,6 +37,7 @@ for %%a in (%*) do (
 	if /I "%%a"=="wildcat-deploy" (
 		winget uninstall "Acronis Snap Deploy 6 Management Agent"
 		winget uninstall RedHat.VirtIO
+		C:/Admin/Scripts/rename-pc.bat
 	)
 )
 
