@@ -1,6 +1,9 @@
 @echo off
 SET "PARAM=%~1"
 
+REM **** permit ps executions
+powershell -Command "Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force"
+
 IF /I "%PARAM%"=="git-reset" ( 
 	git --git-dir="C:\Admin\Scripts\.git" --work-tree="C:\Admin\Scripts" fetch --all
 	git --git-dir="C:\Admin\Scripts\.git" --work-tree="C:\Admin\Scripts" reset --hard origin/main
