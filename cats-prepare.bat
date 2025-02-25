@@ -1,5 +1,4 @@
 @echo off
-
 REM **** Consent Powershell Scripts
 powershell -Command "Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
 
