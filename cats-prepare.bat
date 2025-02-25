@@ -1,10 +1,7 @@
 @echo off
 
 REM **** Consent Powershell Scripts
-powershell -Command "Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force"
-
-@echo off
-setlocal enabledelayedexpansion
+powershell -Command "Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force"å
 
 for %%a in (%*) do (
 	if /I "%%a"=="scripts" (
