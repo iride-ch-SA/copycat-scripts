@@ -5,7 +5,6 @@ powershell -Command "Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force"
 
 @echo off
 setlocal enabledelayedexpansion
-set "do-restart=0"
 
 for %%a in (%*) do (
 	if /I "%%a"=="scripts" (
@@ -58,10 +57,4 @@ for %%a in (%*) do (
 		REM **** Hide itadmin from Login Screen
 		reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts\UserList" /t REG_DWORD /f /d 0 /v itadmin
 	)
-)
-
-if "!dorestart!"=="1" ( 
-	echo Restart is required by the script, presse enter to restart.
-	pause
-	shutdown /r /t 0 
 )
