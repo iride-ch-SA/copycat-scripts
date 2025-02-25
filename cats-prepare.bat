@@ -1,4 +1,6 @@
 @echo off
+setlocal enabledelayedexpansion
+
 REM **** Consent Powershell Scripts
 powershell -Command "Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
 
