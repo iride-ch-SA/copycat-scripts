@@ -37,4 +37,8 @@ for %%a in (%*) do (
 		powershell -command "(new-object System.Net.WebClient).DownloadFile('https://dlcdnets.asus.com/pub/ASUS/NUC/NUC_13_Pro_Kit/NUC13AN_LC_non-Vpro_INF_Pack_8_23_2024.zip','C:\Admin\Drivers\NUC_Drivers.zip')"
 		powershell -command "Expand-Archive -Path 'C:\Admin\Drivers\NUC_Drivers.zip' -DestinationPath 'C:\Admin\Drivers\NUC_Drivers' -Force"	
 	)
+	
+	if /I "%%a"=="windowsapp" (
+		powershell -noprofile -executionpolicy bypass -command "C:\Admin\Scripts\ps\install-user-avd.ps1"
+	)
 )
