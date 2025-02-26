@@ -36,6 +36,5 @@ Add *template* for a clean run on VM templates to the cats-prepare.bat script
   - Office 365 (it-it, 64bit)
 - support: Install Remote Support Tool
 - intelnuc:
-  - Add Ethernet Drivers to Windows
-  - Install Intel NUC Driver Packages
   - Install Intel Driver and Support Assistant
+- windowsapp: Install Windows App for the current user
