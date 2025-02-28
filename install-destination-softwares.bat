@@ -41,4 +41,10 @@ for %%a in (%*) do (
 	if /I "%%a"=="windowsapp" (
 		powershell -noprofile -executionpolicy bypass -command "C:\Admin\Scripts\ps\install-user-avd.ps1"
 	)
+	
+	if /I "%%a"=="google-workspace" (
+		winget install Google.GoogleDrive --accept-package-agreements --accept-source-agreements
+		powershell -command "(new-object System.Net.WebClient).DownloadFile('https://dl.google.com/dl/google-apps-sync/x64/enterprise_gsync.msi','C:\Admin\Installers\enterprise_gsync.msi')"
+		C:\Admin\Installers\enterprise_gsync.msi
+	)
 )
