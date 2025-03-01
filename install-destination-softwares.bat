@@ -56,4 +56,8 @@ for %%a in (%*) do (
 		powershell -command "(new-object System.Net.WebClient).DownloadFile('https://dl.google.com/dl/google-apps-sync/x64/enterprise_gsync.msi','C:\Admin\Installers\enterprise_gsync.msi')"
 		C:\Admin\Installers\enterprise_gsync.msi
 	)
+	
+	if /I "%%a"=="qgis-ltr" (
+		winget install OSGeo.QGIS_LTR --accept-package-agreements --accept-source-agreements
+	)
 )
