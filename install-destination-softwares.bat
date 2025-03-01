@@ -16,6 +16,11 @@ for %%a in (%*) do (
 		winget install VideoLAN.VLC --accept-package-agreements --accept-source-agreements
 	)
 	
+	if /I "%%a"=="bginfo" (
+		winget install Microsoft.Sysinternals.BGInfo --location C:\Admin\Apps\ 
+		call C:\Admin\Scripts\set-permissions.bat bginfo
+	)
+	
 	if /I "%%a"=="microsoft-office" (
 		REM *** Install Office via Deployment Tool
 		winget install Microsoft.OfficeDeploymentTool --accept-package-agreements --accept-source-agreements
