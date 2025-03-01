@@ -14,7 +14,9 @@ for %%a in (%*) do (
 		winget install Mozilla.Firefox --accept-package-agreements --accept-source-agreements
 		winget install Adobe.Acrobat.Reader.64-bit --accept-package-agreements --accept-source-agreements
 		winget install VideoLAN.VLC --accept-package-agreements --accept-source-agreements
-		
+	)
+	
+	if /I "%%a"=="microsoft-office" (
 		REM *** Install Office via Deployment Tool
 		winget install Microsoft.OfficeDeploymentTool --accept-package-agreements --accept-source-agreements
 		"C:\Program Files\OfficeDeploymentTool\setup.exe" /configure C:\Admin\Scripts\config\office.xml

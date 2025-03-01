@@ -22,11 +22,11 @@ for %%a in (%*) do (
 	
 	if /I "%%a"=="utils" (
 		REM **** Add Apps
-		C:\Users\itadmin>winget install Microsoft.Sysinternals.BGInfo --location C:\Admin\Apps\
+		winget install Microsoft.Sysinternals.BGInfo --location C:\Admin\Apps\
 		icacls "C:\Admin\Apps\bginfo.exe" /grant Users:(RX)
 		
 		REM **** Install Destination Softwares
-		C:\Admin\Scripts\install-destination-softwares.bat template base support 
+		C:\Admin\Scripts\install-destination-softwares.bat template base support
 		
 		REM **** Set a sagerun:1 (TODO: create REGISTRY ADD to do unattended)
 		cleanmgr /sageset:1
