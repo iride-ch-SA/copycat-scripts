@@ -60,4 +60,8 @@ for %%a in (%*) do (
 	if /I "%%a"=="qgis-ltr" (
 		winget install OSGeo.QGIS_LTR --accept-package-agreements --accept-source-agreements
 	)
+	
+	if /I "%%a"=="wireguard" (
+		winget install WireGuard.WireGuard --accept-package-agreements --accept-source-agreements
+	)
 )
