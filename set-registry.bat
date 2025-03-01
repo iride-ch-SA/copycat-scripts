@@ -31,7 +31,7 @@ IF /I "%PARAM1%"=="aad-users" (
 	IF /I "%PARAM2%"=="hide" (
 		reg delete "HKLM\Software\Policies\Microsoft\Windows\System" /v EnumerateLocalUsers /f
 		reg add "HKLM\Software\Policies\Microsoft\Windows\System"  /t REG_DWORD /v DontEnumerateConnectedUsers /d "1" /f
-		reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /v dontdisplaylastusername /f
+		reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /t REG_DWORD /v dontdisplaylastusername /d "1" /f
 	) 
 )
 
