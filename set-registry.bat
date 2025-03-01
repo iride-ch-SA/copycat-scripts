@@ -23,15 +23,13 @@ IF /I "%PARAM1%"=="news-and-interests" (
 )
 
 IF /I "%PARAM1%"=="aad-users" ( 
+	reg delete "HKLM\Software\Policies\Microsoft\Windows\System" /v DontEnumerateConnectedUsers /f
+	reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /t REG_DWORD /v dontdisplaylastusername /d "0" /f
 	IF /I "%PARAM2%"=="show" (
 		reg add "HKLM\Software\Policies\Microsoft\Windows\System" /t REG_DWORD /v EnumerateLocalUsers /d "1" /f
-		reg delete "HKLM\Software\Policies\Microsoft\Windows\System" /v DontEnumerateConnectedUsers /f
-		reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /t REG_DWORD /v dontdisplaylastusername /d "0" /f
 	) 
 	IF /I "%PARAM2%"=="hide" (
 		reg delete "HKLM\Software\Policies\Microsoft\Windows\System" /v EnumerateLocalUsers /f
-		reg add "HKLM\Software\Policies\Microsoft\Windows\System"  /t REG_DWORD /v DontEnumerateConnectedUsers /d "1" /f
-		reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /t REG_DWORD /v dontdisplaylastusername /d "1" /f
 	) 
 )
 
@@ -42,6 +40,8 @@ IF /I "%PARAM1%"=="local-user" (
 	)
 	SET "PARAM3=%~3"
 	
+	reg delete "HKLM\Software\Policies\Microsoft\Windows\System" /v DontEnumerateConnectedUsers /f
+	reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /t REG_DWORD /v dontdisplaylastusername /d "0" /f
 	IF /I "%PARAM2%"=="show" ( 
 		reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts\UserList" /v "%PARAM3%" /f
 	)
