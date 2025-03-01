@@ -43,9 +43,9 @@ IF /I "%PARAM1%"=="local-user" (
 	SET "PARAM3=%~3"
 	
 	IF /I "%PARAM2%"=="show" ( 
-		reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts\UserList" /f /v %PARAM3%
+		reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts\UserList" /v "%PARAM3%"
 	)
 	IF /I "%PARAM2%"=="hide" ( 
-		reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts\UserList" /t REG_DWORD /f /d 0 /v %PARAM3%
+		reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts\UserList" /t REG_DWORD /f /d 0 /v "%PARAM3%"
 	)
 )
