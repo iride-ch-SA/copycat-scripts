@@ -21,7 +21,7 @@ if "%~3"=="Administrators" (
 	net localgroup administrators "%PARAM1%" /add
 ) else (
 	echo [36mAdd non-administrative user to Remote Desktop User group[0m 
-	C:\Admin\Scripts\ps\set-rdpuser.ps1 "%PARAM1%"
+powershell -noprofile -executionpolicy bypass -command C:\Admin\Scripts\ps\set-rdpuser.ps1 "%PARAM1%"
 )
 
 echo [96m----- Create User Script[0m [95mENDED[0m [96m-----[0m 
