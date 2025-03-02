@@ -49,3 +49,13 @@ IF /I "%PARAM1%"=="local-user" (
 		reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts\UserList" /t REG_DWORD /f /d 0 /v "%PARAM3%"
 	)
 )
+
+IF /I "%PARAM1%"=="wireguard-nonadmin-users" ( 
+	IF /I "%PARAM2%"=="enable" (
+		reg add "HKLM\SOFTWARE\WireGuard" /f
+		reg add "HKLM\SOFTWARE\WireGuard" /t REG_DWORD /v LimitedOperatorUI /d "1" /f
+	)
+	IF /I "%PARAM2%"=="disable" (
+		reg del "HKLM\SOFTWARE\WireGuard" /v LimitedOperatorUI /f
+	)
+)
