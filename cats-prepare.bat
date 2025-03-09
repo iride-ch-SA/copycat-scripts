@@ -1,28 +1,12 @@
 @echo off
 setlocal enabledelayedexpansion
 
-echo [96m----- Cats Prepare Script[0m [92mSTARTED[0m [96m-----[0m 
+echo [95mSTARTING [96m : CopyCat Prepare[0m
 
 for %%a in (%*) do (
-	if /I "%%a"=="scripts" (
-		echo [36mUpdate Scripts Folder[0m 
-		git --git-dir="C:\Admin\Scripts\.git" --work-tree="C:\Admin\Scripts" pull 
-		call C:\Admin\Scripts\set-path.bat
-	)
-
-	if /I "%%a"=="admin-folders" (
-		echo [36mPreparing/Upgrading C:\Admin folder structure[0m
-		if not exist "C:\Admin" ( mkdir C:\Admin )
-		if exist "C:\Admin" ( echo [32mOK:[0m C:\Admin ) else ( echo [31mERROR: C:\Admin wasn't created [0m )
-		if not exist "C:\Admin\Apps" ( mkdir C:\Admin\Apps )
-		if exist "C:\Admin\Apps" ( echo [32mOK:[0m C:\Admin\Apps ) else ( echo [31mERROR: C:\Admin\Apps wasn't created [0m )
-		if not exist "C:\Admin\Drivers" ( mkdir C:\Admin\Drivers )
-		if exist "C:\Admin\Drivers" ( echo [32mOK:[0m C:\Admin\Drivers ) else ( echo [31mERROR: C:\Admin\Drivers wasn't created [0m )
-		if not exist "C:\Admin\Installers" ( mkdir C:\Admin\Installers )
-		if exist "C:\Admin\Installers" ( echo [32mOK:[0m C:\Admin\Installers ) else ( echo [31mERROR: C:\Admin\Installers wasn't created [0m )
-		if not exist "C:\Admin\Others" ( mkdir C:\Admin\Others )
-		if exist "C:\Admin\Others" ( echo [32mOK:[0m C:\Admin\Others ) else ( echo [31mERROR: C:\Admin\Others wasn't created [0m )
-	)
+	if exist C:\Admin\Scripts\cats-recipes\%%a.bat ( 
+		call C:\Admin\Scripts\cats-recipes\%%a.bat prepare
+	) 
 
 	if /I "%%a"=="utils" (
 		echo [36mInstall Utilities[0m 
@@ -64,4 +48,5 @@ for %%a in (%*) do (
 	)
 )
 
-echo [96m----- Cats Prepare Script[0m [95mENDED[0m [96m-----[0m 
+echo [92mDONE     [96m : CopyCat Prepare[0m
+exit /b 0
