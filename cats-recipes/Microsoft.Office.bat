@@ -1,4 +1,6 @@
 @echo off
+
+if "%~1"=="install" (
 	winget list --id Microsoft.Office | find /I "Microsoft 365 Apps for enterprise" > nul
 	if %errorlevel% NEQ 0 (
 		call C:\Admin\Scripts\cats-install-winget.bat Microsoft.OfficeDeploymentTool
@@ -27,4 +29,6 @@
 		"C:\Program Files\Common Files\Microsoft Shared\ClickToRun\OfficeC2RClient.exe" /update user displaylevel=false forceappshutdown=true
 		exit /b 1
 	)
+)
+
 exit /b 2
