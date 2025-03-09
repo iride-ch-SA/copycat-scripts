@@ -1,10 +1,11 @@
 @echo off
+setlocal enabledelayedexpansion
 
 set _wsearch=winget search %~1
-for /f "tokens=* delims=(=" %%s in ('%_wsearch% ^|find /I /c " %~1 "') do (
+for /f "tokens=* delims=(=" %%s in ('!_wsearch! ^|find /I /c " %~1 "') do (
 	if %%s EQU 1 (
 		set _wlist=winget list --id %~1
-		for /f "tokens=* delims=(=" %%f in ('%_wlist% ^|find /I /c " %~1 "') do (
+		for /f "tokens=* delims=(=" %%f in ('!_wlist! ^|find /I /c " %~1 "') do (
 			if %%f EQU 0 (
 				echo [36mWINGET    : Installing %~1 [0m
 				winget install %~1 %~2 %~3 --accept-package-agreements --accept-source-agreements
