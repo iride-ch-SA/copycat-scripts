@@ -5,8 +5,9 @@ echo [95mSTARTING [96m : CopyCat Install[0m
 
 for %%a in (%*) do (
 	:: Cats Recipes
-	if exist "C:\Admin\Scripts\cats-recipes\%%a.bat" ( call "C:\Admin\Scripts\cats-recipes\%%a.bat" )
-	else (
+	if exist C:\Admin\Scripts\cats-recipes\%%a.bat ( 
+		call C:\Admin\Scripts\cats-recipes\%%a.bat 
+	) else (
 		set isShortCut=0
 		:: WinGet ShortCuts
 		if /I "%%a"=="Chrome" ( call C:\Admin\Scripts\cats-install-winget.bat Google.Chrome & set isShortCut=1 )
