@@ -13,28 +13,30 @@ Run on an administrative cmd terminal:
 ```bash
 winget install --id Git.Git -e --source winget
 git clone https://github.com/iride-ch-SA/copycat-scripts.git C:\Admin\Scripts
-C:\Admin\Scripts\cats-prepare.bat
 ```
 
-Add *template* for a clean run on VM templates to the cats-prepare.bat script
-
-## Scripts
-### cats-clean.bat [win-updates|sfc|dism-online|network]
-- clean: Do a cleanmgr on sagerun:1
-- win-updates: Clean software distribution by stopping wuauserv
-- sfc: do an sfc /scannow
-- dism-online: Cleanup-Image
-- network: reset network and set to private
-
-### install-destination-softwares.bat [template|base|support]
-- template: Install Acronis Agent
-- base: Install
-  - Google Chrome
-  - Mozilla Firefox
-  - Adobe Acrobat Reader (64bit)
-  - VideoLAN VLC
-  - Office 365 (it-it, 64bit)
-- support: Install Remote Support Tool
-- intelnuc:
-  - Install Intel Driver and Support Assistant
-- windowsapp: Install Windows App for the current user
+## Cats Command
+### Use Cats to run Copy Cat tools
+```bash
+  cats [install|uninstall|update|prepare|clean|set] [options]
+```
+#### cats install [recipe|shortcut|winget-name]
+##### Recipes
+- Acronis.Agent
+- Adobe.Acrobat.Reader
+- BgInfo
+- Cats.Base
+- G360.Support
+- Google.GWSMO
+- Microsoft.Office
+##### Shortcuts
+- Chrome
+- Firefox
+- VLC
+- intelDASA
+- gDrive
+- qGIS
+- WireGuard
+- WindowsApp
+- GWSMO
+- Acrobat
