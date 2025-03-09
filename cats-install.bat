@@ -4,41 +4,25 @@ setlocal enabledelayedexpansion
 echo [95mSTARTING [96m : CopyCat Install[0m
 
 for %%a in (%*) do (
-	if /I "%%a"=="Adobe.Acrobat.Reader" (
-		if "%PROCESSOR_ARCHITECTURE%" == "AMD64" (
-			winget list --id Adobe.Acrobat.Reader.64-bit | findstr /I "Adobe.Acrobat.Reader.64-bit" > nul
-			if %errorlevel% neq 0 (
-				echo [36mWINGET    : Installing Adobe Acrobat Reader 64bit [0m
-				winget install --id Adobe.Acrobat.Reader.64-bit --accept-package-agreements --accept-source-agreements
-			) else (
-				echo [36mWINGET    : Upgrading Adobe Acrobat Reader 64bit [0m
-				winget upgrade --id Adobe.Acrobat.Reader.64-bit
-			)
-		) else (
-			winget list --id Adobe.Acrobat.Reader.32-bit | findstr /I "Adobe.Acrobat.Reader.32-bit" > nul
-			if %errorlevel% neq 0 (
-				echo [36mWINGET    : Installing Adobe Acrobat Reader 32bit [0m
-				winget install --id Adobe.Acrobat.Reader.32-bit --accept-package-agreements --accept-source-agreements
-			) else (
-				echo [36mWINGET    : Upgrading Adobe Acrobat Reader 64bit [0m
-				winget upgrade --id Adobe.Acrobat.Reader.32-bit
-			)
+	:: Cats Recipes
+	if exist "C:\Admin\Scripts\cats-recipes\%%a.bat" ( call "C:\Admin\Scripts\cats-recipes\%%a.bat" )
+	else (
+		set isShortCut=0
+		:: WinGet ShortCuts
+		if /I "%%a"=="Chrome" ( call C:\Admin\Scripts\cats-install-winget.bat Google.Chrome & set isShortCut=1 )
+		if /I "%%a"=="Firefox" ( call C:\Admin\Scripts\cats-install-winget.bat Mozilla.Firefox & set isShortCut=1 )
+		if /I "%%a"=="VLC" ( call C:\Admin\Scripts\cats-install-winget.bat VideoLAN.VLC & set isShortCut=1 )
+		if /I "%%a"=="Acrobat" ( 
+			if exist "C:\Admin\Scripts\cats-recipes\Adobe.Acrobat.Reader.bat" ( call "C:\Admin\Scripts\cats-recipes\Adobe.Acrobat.Reader.bat" )
+			set isShortCut=1 
 		)
-	) else (
-		echo [33mWARNING   : Package %%a not found as copycat recipe, trying to pass directly to winget [0m
-		winget search %%a | findstr /I "%%a" > nul
-		if !errorlevel! neq 0 (
-			echo [31mERROR     : Package %%a cannot be found in winget. [0m
-		) else (
-			winget list --id Adobe.Acrobat.Reader.64-bit | findstr /I "Adobe.Acrobat.Reader.64-bit" > nul
-			if !errorlevel! neq 0 (
-				echo [36mWINGET    : Installing %%a [0m
-				winget install %%a --accept-package-agreements --accept-source-agreements
-			) else (
-				echo [36mWINGET    : Upgrading %%a [0m
-				winget upgrade %%a
-			)
+		
+		if !isShortCut! EQU 0 (
+			echo [33mWARNING   : Package %%a not found as copycat recipe, trying to pass directly to winget [0m
+			call C:\Admin\Scripts\cats-install-winget.bat %%a
 		)
 	)
 )
+
 echo [92mDONE     [96m : CopyCat Install[0m
+exit /b 0
