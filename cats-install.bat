@@ -20,13 +20,13 @@ for %%a in (%*) do (
 		if /I "%%a"=="WindowsApp" ( call C:\Admin\Scripts\cats-install-winget.bat Microsoft.WindowsApp & set isShortCut=1 )
 		if /I "%%a"=="GWSMO" ( 
 			if exist "C:\Admin\Scripts\cats-recipes\Google.GWSMO.bat" ( 
-				call "C:\Admin\Scripts\cats-recipes\Google.GWSMO.bat install" 
+				call "C:\Admin\Scripts\cats-recipes\Google.GWSMO.bat" install
 			)
 			set isShortCut=1 
 		)
 		if /I "%%a"=="Acrobat" ( 
 			if exist "C:\Admin\Scripts\cats-recipes\Adobe.Acrobat.Reader.bat" ( 
-				call "C:\Admin\Scripts\cats-recipes\Adobe.Acrobat.Reader.bat install" 
+				call "C:\Admin\Scripts\cats-recipes\Adobe.Acrobat.Reader.bat" install 
 			)
 			set isShortCut=1 
 		)
