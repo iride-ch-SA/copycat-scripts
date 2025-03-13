@@ -10,7 +10,7 @@ if "%~1"=="" (
 	:: Check if enough parameters are passed
 	if "%~2"=="" (
 		echo [31mERROR     : You must specify at least one parameter for verb [91minstall [0m
-		echo [94mUSAGE     : cats install package-names [0m
+		echo [94mUSAGE     : cats install package-names, recipe or shortcut [0m
 	) else (
 		echo [36mCALLING   : cats install %2 %3 %4 %5 %6 %7 %8 %9 [0m
 		call C:\Admin\Scripts\cats-install.bat %2 %3 %4 %5 %6 %7 %8 %9
@@ -20,7 +20,15 @@ if "%~1"=="" (
 ) else if "%~1"=="update" (
 	echo [36mCALLING   : cats-update %2 %3 %4 %5 %6 %7 %8 %9 [0m
 ) else if "%~1"=="prepare" (
-	echo [36mCALLING   : cats-prepare %2 %3 %4 %5 %6 %7 %8 %9 [0m
+	:: Check if enough parameters are passed
+	if "%~2"=="" (
+		echo [31mERROR     : You must specify at least one parameter for verb [91mprepare [0m
+		echo [94mUSAGE     : cats prepare recipe [0m
+	) else (
+		echo [36mCALLING   : cats-prepare %2 %3 %4 %5 %6 %7 %8 %9 [0m
+		call C:\Admin\Scripts\cats-prepare.bat %2 %3 %4 %5 %6 %7 %8 %9
+	)
+	
 ) else if "%~1"=="clean" (
 	echo [36mCALLING   : cats-clean %2 %3 %4 %5 %6 %7 %8 %9 [0m
 ) else if "%~1"=="set" (
