@@ -8,7 +8,7 @@ They are regularly used for distribution of Windows images on hardware supplied 
 Scripts are a set of tools used and maintained to manage and deploy the Copy Cat(s) templates to Wild Cat(s) hardwares.
 Git is used to fancy update and maintain the scripts set into multiples VM for testing and production use.
 
-## Hot to use
+## How to use
 Run on an administrative cmd terminal:
 ```bash
 winget install --id Git.Git -e --source winget
