@@ -18,7 +18,14 @@ if "%~1"=="" (
 ) else if "%~1"=="uninstall" (
 	echo [36mCALLING   : cats-uninstall %2 %3 %4 %5 %6 %7 %8 %9 [0m
 ) else if "%~1"=="update" (
-	echo [36mCALLING   : cats-update %2 %3 %4 %5 %6 %7 %8 %9 [0m
+	:: Check if enough parameters are passed
+	if "%~2"=="" (
+		echo [31mERROR     : You must specify at least one parameter for verb [91mupdate [0m
+		echo [94mUSAGE     : cats update recipe [0m
+	) else (
+		echo [36mCALLING   : cats update %2 %3 %4 %5 %6 %7 %8 %9 [0m
+		call C:\Admin\Scripts\cats-update.bat %2 %3 %4 %5 %6 %7 %8 %9
+	)
 ) else if "%~1"=="prepare" (
 	:: Check if enough parameters are passed
 	if "%~2"=="" (
