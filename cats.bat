@@ -35,7 +35,6 @@ if "%~1"=="" (
 		echo [36mCALLING   : cats-prepare %2 %3 %4 %5 %6 %7 %8 %9 [0m
 		call C:\Admin\Scripts\cats-prepare.bat %2 %3 %4 %5 %6 %7 %8 %9
 	)
-	
 ) else if "%~1"=="clean" (
 	echo [36mCALLING   : cats-clean %2 %3 %4 %5 %6 %7 %8 %9 [0m
 ) else if "%~1"=="set" (
