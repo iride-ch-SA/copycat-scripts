@@ -14,7 +14,7 @@ for %%a in (%*) do (
 	
 	if /I "%%a"=="Admin" (
 		if exist C:\Admin\Scripts\cats-recipes\User.bat (
-			call "C:\Admin\Scripts\cats-recipes\User.bat" create %2 %3 Administrators
+			call "C:\Admin\Scripts\cats-recipes\User.bat" create %2 %3 Administrators %4 %5 %6 %7 %8
 		)
 	)
 )
