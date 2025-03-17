@@ -7,7 +7,7 @@ if "%~1"=="create" (
 	)
 	SET "PARAM1=%~2"
 	
-	f "%~3"=="" (
+	if "%~3"=="" (
 		echo [31mERROR     : You must specify a password for the user as third parameter [0m
 		exit /b 1
 	)
