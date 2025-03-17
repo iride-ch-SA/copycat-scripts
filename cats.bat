@@ -33,6 +33,15 @@ if "%~1"=="" (
 	echo [36mCALLING   : cats-clean %2 %3 %4 %5 %6 %7 %8 %9 [0m
 ) else if "%~1"=="set" (
 	echo [36mCALLING   : cats-set %2 %3 %4 %5 %6 %7 %8 %9 [0m
+) else if "%~1"=="create" (
+	:: Check if enough parameters are passed
+	if "%~2"=="" (
+		echo [31mERROR     : You must specify at least one parameter for verb [91mcreate [0m
+		echo [94mUSAGE     : cats create recipe [0m
+	) else (
+		echo [36mCALLING   : cats-create %2 %3 %4 %5 %6 %7 %8 %9 [0m
+		call C:\Admin\Scripts\cats-create.bat %2 %3 %4 %5 %6 %7 %8 %9
+	)
 )
 
 echo [92mDONE     [96m : CopyCat Scripts[0m
