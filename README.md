@@ -12,7 +12,14 @@ Git is used to fancy update and maintain the scripts set into multiples VM for t
 Run on an administrative cmd terminal:
 ```bash
 winget install --id Git.Git -e --source winget
+```
+Close cmd, open it again (git should be added in path).
+
+```bash
 git clone https://github.com/iride-ch-SA/copycat-scripts.git C:\Admin\Scripts
+C:\Admin\Scripts\cats prepare Cats.Scripts
+C:\Admin\Scripts\cmda
+exit
 ```
 
 ## Cats Command
