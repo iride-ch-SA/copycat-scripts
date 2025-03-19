@@ -33,6 +33,7 @@ exit
 - Adobe.Acrobat.Reader
 - BgInfo
 - Cats.Base
+- Cats.Utils
 - G360.Support
 - Google.GWSMO
 - Microsoft.Office
@@ -47,3 +48,26 @@ exit
 - WindowsApp
 - GWSMO
 - Acrobat
+
+#### cats prepare [recipe|shortcut]
+##### Recipes
+- Cats.AdminFolders
+- Cats.Scripts
+- Cats.Utils
+- User
+##### Shortcuts
+- win-updates
+- deploy-azure
+
+#### cats update [recipe]
+##### Recipes
+- Cats.Scripts
+
+#### cats create [recipe]
+##### Recipes
+- User
+
+## Cats Recipes
+### User
+- cats create %username% %password% [Administrators hide]|[no-rdp]
+- cats prepare %username% [show|hide]
