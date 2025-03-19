@@ -63,11 +63,14 @@ exit
 ##### Recipes
 - Cats.Scripts
 
-#### cats create [recipe]
+#### cats create [recipe|shortcut]
 ##### Recipes
 - User
+##### Shortcuts
+- Admin
 
 ## Cats Recipes
 ### User
-- cats create %username% %password% [Administrators hide]|[no-rdp]
-- cats prepare %username% [show|hide]
+- cats create User *username* *password* [Administrators hide]|[no-rdp]
+- cats create Admin *username* *password* [hide]
+- cats prepare User *username* [show|hide]
