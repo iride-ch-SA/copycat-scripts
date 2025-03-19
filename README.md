@@ -25,7 +25,7 @@ exit
 ## Cats Command
 ### Use Cats to run Copy Cat tools
 ```bash
-  cats [install|uninstall|update|prepare|clean|set] [options]
+  cats [install|uninstall|update|prepare|clean|set|create] [options]
 ```
 #### cats install [recipe|shortcut|winget-name]
 ##### Recipes
