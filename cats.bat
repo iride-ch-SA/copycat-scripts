@@ -35,7 +35,7 @@ if "%~1"=="prepare" (
 )
 
 if "%~1"=="clean" (
-	call C:\Admin\Scripts\cats-create.bat %2 %3 %4 %5 %6 %7 %8 %9
+	call C:\Admin\Scripts\cats-clean.bat %2 %3 %4 %5 %6 %7 %8 %9
 )
 
 if "%~1"=="set" (
