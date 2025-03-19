@@ -58,12 +58,14 @@ Close cmd again, now Cats is added to the path
 - Cats.Utils
 - User
 ##### Shortcuts
-- win-updates
+- win-updates : prepares Windows for use the **cats update windows** command
 - deploy-azure
 
 #### cats update [recipe]
 ##### Recipes
 - Cats.Scripts
+##### Shortcuts
+- Windows
 
 #### cats create [recipe|shortcut]
 ##### Recipes
