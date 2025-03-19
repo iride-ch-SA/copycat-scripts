@@ -48,6 +48,9 @@ if "%~1"=="" (
 		echo [36mCALLING   : cats-create %2 %3 %4 %5 %6 %7 %8 %9 [0m
 		call C:\Admin\Scripts\cats-create.bat %2 %3 %4 %5 %6 %7 %8 %9
 	)
+) else if "%~1"=="backup" (
+	echo [36mCALLING   : cats-backup %2 %3 %4 %5 %6 %7 %8 %9 [0m
+	call C:\Admin\Scripts\cats-backup.bat %2 %3 %4 %5 %6 %7 %8 %9
 )
 
 echo [92mDONE     [96m : CopyCat Scripts[0m

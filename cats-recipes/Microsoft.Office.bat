@@ -25,10 +25,16 @@ if "%~1"=="install" (
 			exit /b 2
 		)
 	) else (
-		echo [36mMSOFFICE  : Upgrading %~1 [0m
-		"C:\Program Files\Common Files\Microsoft Shared\ClickToRun\OfficeC2RClient.exe" /update user displaylevel=false forceappshutdown=true
+		call ::update
 		exit /b 1
 	)
+)
+
+if "%~1"=="update" (
+	::update
+	echo [36mMSOFFICE  : Upgrading %~1 [0m
+	"C:\Program Files\Common Files\Microsoft Shared\ClickToRun\OfficeC2RClient.exe" /update user displaylevel=false forceappshutdown=true
+	exit /b 0
 )
 
 exit /b 2
