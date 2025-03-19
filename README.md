@@ -18,9 +18,11 @@ Close cmd, open it again (git should be added in path).
 ```bash
 git clone https://github.com/iride-ch-SA/copycat-scripts.git C:\Admin\Scripts
 C:\Admin\Scripts\cats prepare Cats.Scripts
-C:\Admin\Scripts\cmda
-exit
 ```
+Close cmd again, now Cats is added to the path
+
+## Cats Utils
+- cmda : Run cmd as Administrator
 
 ## Cats Command
 ### Use Cats to run Copy Cat tools
