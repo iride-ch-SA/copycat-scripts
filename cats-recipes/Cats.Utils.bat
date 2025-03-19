@@ -14,7 +14,7 @@ if "%~1"=="prepare" (
 	echo [32mRECIPE    : Prepare Cats Utilities [0m
 	
 	echo [32mRECIPE    : Create a cleanmgr sageset:1, select from GUI the clean settings to be saved [0m
-	cleanmgr /sageset:1
+	cmd /c cleanmgr /sageset:1
 	echo [33mRECIPE    : Press a key when done [0m
 	pause
 	

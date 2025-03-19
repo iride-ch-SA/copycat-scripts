@@ -1,1 +1,0 @@
-C:\Admin\Scripts\cats-clean.bat sfc dism-online win-updates clean

@@ -12,8 +12,9 @@ for %%a in (%*) do (
 		)
 	)
 	
-	if /I "%%a"=="windows" (
+	if /I "%%a"=="Windows" (
 		winget upgrade --all --accept-package-agreements --accept-source-agreements
+		powershell -Command "Set-ExecutionPolicy RemoteSigned -Scope CurrentUser -Force"
 		powershell -command "Import-Module PSWindowsUpdate; Get-WindowsUpdate -Install -AcceptAll -AutoReboot"
 	)
 )
