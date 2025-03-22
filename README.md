@@ -29,8 +29,16 @@ Close cmd again, now Cats is added to the path
 ```bash
   cats [install|uninstall|update|prepare|clean|set|create] [options]
 ```
-#### cats install [recipe|shortcut|winget-name]
-##### Recipes
+### Shortening 
+Cats commands are all about shortening (operations, time, command, ...), they are continuosly developed to be as easy and efficient as possible.
+#### Uppercase and lowercase
+Casing in cats command is completely irrelevant, for reading purposes in guides we use Upper- and lower-case in cats-commands.
+#### Cats. Recipes
+Every Cats.Recipe is shortable in commands:
+***cats update Cats.Scripts*** is fully equivalent to ***cats update Scripts***
+
+### cats install [recipe|shortcut|winget-name]
+#### Recipes
 - Acronis.Agent
 - Adobe.Acrobat.Reader
 - BgInfo
@@ -39,7 +47,7 @@ Close cmd again, now Cats is added to the path
 - G360.Support
 - Google.GWSMO
 - Microsoft.Office
-##### Shortcuts
+#### Shortcuts
 - Chrome
 - Firefox
 - VLC
@@ -51,26 +59,30 @@ Close cmd again, now Cats is added to the path
 - GWSMO
 - Acrobat
 
-#### cats prepare [recipe|shortcut]
-##### Recipes
+### cats prepare [recipe|shortcut]
+#### Recipes
 - Cats.AdminFolders
 - Cats.Scripts
 - Cats.Utils
 - User
-##### Shortcuts
+#### Shortcuts
 - win-updates : prepares Windows for use the **cats update windows** command
 - deploy-azure
 
-#### cats update [recipe]
-##### Recipes
+### cats update [recipe]
+#### Recipes
 - Cats.Scripts
-##### Shortcuts
+#### Shortcuts
 - Windows
+#### Usage
+- **cats update Scripts** : Update Cats.Scripts from git source
+- **cats update Scripts reset** : Fully reset C:\Admin\Scripts folder by deleting and cloning from git source
+- **cats update windows** : Do winget updates and windows update
 
-#### cats create [recipe|shortcut]
-##### Recipes
+### cats create [recipe|shortcut]
+#### Recipes
 - User
-##### Shortcuts
+#### Shortcuts
 - Admin
 
 ## Cats Recipes
