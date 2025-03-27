@@ -28,6 +28,9 @@ IF EXIST "C:\Admin\Scripts\config\%username%.bgi" (
 ) ELSE IF EXIST "C:\Admin\Others\%username%.bgi" (
 	echo [36mUsing a profile specific for user %username% found in C:\Admin\Others\%username%.bgi[0m
 	C:\Admin\Apps\Bginfo.exe C:\Admin\Others\%username%.bgi /timer:0 /silent /accepteula
+) ELSE IF EXIST "C:\Admin\Others\background.bgi" (
+	echo [36mUsing a profile found in C:\Admin\Others\background.bgi[0m
+	C:\Admin\Apps\Bginfo.exe C:\Admin\Others\background.bgi /timer:0 /silent /accepteula
 ) ELSE IF EXIST "C:\Admin\Others\background.jpg" (
 	echo [36mUsing the image found in C:\Admin\Others\background.jpg[0m
 	C:\Admin\Apps\Bginfo.exe C:\Admin\Scripts\config\background.bgi /timer:0 /silent /accepteula
