@@ -58,6 +58,8 @@ Every Cats.Recipe is shortable in commands:
 - WindowsApp
 - GWSMO
 - Acrobat
+#### Usage
+- **cats install BgInfo** : Install BgInfo in C:\Admin\Apps
 
 ### cats prepare [recipe|shortcut]
 #### Recipes
@@ -68,6 +70,10 @@ Every Cats.Recipe is shortable in commands:
 #### Shortcuts
 - win-updates : prepares Windows for use the **cats update windows** command
 - deploy-azure
+#### Usage
+- **cats prepare AdminFolders** : Create Admin folder structure
+- **cats prepare Utils** : Set cleanmgr sageset:1, Disable widget menu bar, Reset Power Settings
+- **cats prepare win-update** : Prepare PSModule e Nuget to permit updates with cats commmands
 
 ### cats update [recipe]
 #### Recipes
