@@ -1,0 +1,42 @@
+param (
+	[Alias("v")]
+	[switch]$Verbose
+)
+
+# BIOS/UEFI
+$bios = (Get-WmiObject Win32_BIOS).SerialNumber
+if ($Verbose) { Write-Output "BIOS/UEFI ID:  $bios" }
+
+# CPU
+$cpu = (Get-WmiObject Win32_Processor).ProcessorId
+if ($Verbose) { Write-Output "CPU ID:        $cpu" }
+
+# Physical Network Adapters
+$physicalAdapters = Get-WmiObject Win32_NetworkAdapter |
+	Where-Object {
+		$_.PhysicalAdapter -eq $true -and
+		$_.MACAddress -ne $null -and
+		$_.Manufacturer -notmatch "Microsoft" -and
+		$_.Name -notmatch "Virtual|Loopback|VPN|TAP|Pseudo"
+	}
+
+$macs = $physicalAdapters | Select-Object -ExpandProperty MACAddress
+$netsid = ($macs | Sort-Object) -join "|"
+if ($Verbose) { Write-Output "NETs ID:       $netsid" }
+
+# Raw String
+$raw = "$bios|$cpu|$netsid"
+if ($Verbose) { Write-Output "RAW ID STRING: $raw" }
+
+# Hash SHA-256
+$uidBytes = [System.Text.Encoding]::UTF8.GetBytes($raw)
+$sha256 = [System.Security.Cryptography.SHA256]::Create()
+$hash = $sha256.ComputeHash($uidBytes)
+$hid = [System.BitConverter]::ToString($hash).Replace("-", "")
+
+# Output 
+if ($Verbose) {
+	Write-Output "HID:           $hid"
+} else {
+	Write-Output $hid
+}
