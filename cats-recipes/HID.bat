@@ -13,7 +13,10 @@ if "%~1"=="create" (
 	if not exist "C:\Admin\Others" (
 		mkdir "C:\Admin\Others"
 	)
+	
+	@echo on
 	echo %HID% > "C:\Admin\Others\HID.txt"
+	@echo off
 
 	exit /b 0
 )
