@@ -4,11 +4,11 @@ param (
 )
 
 # BIOS/UEFI
-$bios = (Get-WmiObject Win32_BIOS).SerialNumber
+$bios = ((Get-WmiObject Win32_BIOS).SerialNumber).Trim()
 if ($Verbose) { Write-Output "BIOS/UEFI ID:  $bios" }
 
 # CPU
-$cpu = (Get-WmiObject Win32_Processor).ProcessorId
+$cpu = ((Get-WmiObject Win32_Processor).ProcessorId).Trim()
 if ($Verbose) { Write-Output "CPU ID:        $cpu" }
 
 # Physical Network Adapters
@@ -21,17 +21,17 @@ $physicalAdapters = Get-WmiObject Win32_NetworkAdapter |
 	}
 
 $macs = $physicalAdapters | Select-Object -ExpandProperty MACAddress
-$netsid = ($macs | Sort-Object) -join "|"
+$netsid = (($macs | Sort-Object) -join "|").Trim()
 if ($Verbose) { Write-Output "NETs ID:       $netsid" }
 
 
 $ramInfo = Get-WmiObject Win32_PhysicalMemory | ForEach-Object {
 	"$($_.SerialNumber)-$($_.PartNumber)"
 }
-$ramID = ($ramInfo | Sort-Object) -join "|"
+$ramID = (($ramInfo | Sort-Object) -join "|").Trim()
 if ($Verbose) { Write-Output "RAM    :       $ramID" }
 
-$diskSerials = (Get-WmiObject Win32_PhysicalMedia | ForEach-Object { $_.SerialNumber }) -join "|"
+$diskSerials = ((Get-WmiObject Win32_PhysicalMedia | ForEach-Object { $_.SerialNumber }) -join "|").Trim()
 if ($Verbose) { Write-Output "HDD/SSD:       $diskSerials" }
 
 # Raw String
