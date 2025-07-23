@@ -24,8 +24,18 @@ $macs = $physicalAdapters | Select-Object -ExpandProperty MACAddress
 $netsid = ($macs | Sort-Object) -join "|"
 if ($Verbose) { Write-Output "NETs ID:       $netsid" }
 
+
+$ramInfo = Get-WmiObject Win32_PhysicalMemory | ForEach-Object {
+	"$($_.SerialNumber)-$($_.PartNumber)"
+}
+$ramID = ($ramInfo | Sort-Object) -join "|"
+if ($Verbose) { Write-Output "RAM    :       $ramID" }
+
+$diskSerials = (Get-WmiObject Win32_PhysicalMedia | ForEach-Object { $_.SerialNumber }) -join "|"
+if ($Verbose) { Write-Output "HDD/SSD:       $diskSerials" }
+
 # Raw String
-$raw = "$bios|$cpu|$netsid"
+$raw = "$bios|$cpu|$netsid|$ramID|$diskSerials"
 if ($Verbose) { Write-Output "RAW ID STRING: $raw" }
 
 # Hash SHA-256
