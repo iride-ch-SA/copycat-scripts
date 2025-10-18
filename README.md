@@ -17,6 +17,8 @@ Close cmd, open it again (git should be added in path).
 
 ```bash
 git clone https://github.com/iride-ch-SA/copycat-scripts.git C:\Admin\Scripts
+```
+```bash
 C:\Admin\Scripts\cats prepare Cats.Scripts
 ```
 Close cmd again, now Cats is added to the path
