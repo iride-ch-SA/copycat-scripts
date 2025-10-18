@@ -76,6 +76,7 @@ Every Cats.Recipe is shortable in commands:
 - **cats prepare AdminFolders** : Create Admin folder structure
 - **cats prepare Utils** : Set cleanmgr sageset:1, Disable widget menu bar, Reset Power Settings
 - **cats prepare win-updates** : Prepare PSModule e Nuget to permit updates with cats commmands
+- **cats prepare deploy-azure** : Prepare login screen for Azure / 365 users
 
 ### cats update [recipe]
 #### Recipes
