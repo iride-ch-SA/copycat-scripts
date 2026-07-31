@@ -41,7 +41,7 @@
           <LocalAccount wcm:action="add">
             <Name>itadmin</Name>
             <DisplayName>itadmin</DisplayName>
-            <Group>itadmin</Group>
+            <Group>Administrators</Group>
             <Password>
               <Value>Ch4ngeTh3P4ss!</Value>
               <PlainText>true</PlainText>
