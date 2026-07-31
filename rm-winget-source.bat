@@ -35,6 +35,5 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
 
 echo.
 echo Operazione completata.
-echo IMPORTANTE: eseguire sysprep ORA, senza riavviare.
 echo.
 pause
