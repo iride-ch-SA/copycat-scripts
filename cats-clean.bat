@@ -51,10 +51,8 @@ for %%a in (%*) do (
 	)
 	
 	if /I "%%a"=="wildcat-deploy" (
-		echo [36mSHORTCUT  : Remove templates tools and rename the host [0m
-		winget uninstall "Acronis Snap Deploy 6 Management Agent"
+		echo [36mSHORTCUT  : Remove VM drivers [0m
 		winget uninstall RedHat.VirtIO
-		C:/Admin/Scripts/rename-pc.bat
 	)
 )
 
