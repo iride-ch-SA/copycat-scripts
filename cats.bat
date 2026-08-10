@@ -17,6 +17,9 @@ if "%~2"=="" (
 	exit /b 2
 )
 
+:: Accept winget source agreements on the first run of this user
+call C:\Admin\Scripts\cats-winget-accept.bat
+
 :: Executing cats verbs and parameters
 if "%~1"=="install" (
 	call C:\Admin\Scripts\cats-install.bat %2 %3 %4 %5 %6 %7 %8 %9

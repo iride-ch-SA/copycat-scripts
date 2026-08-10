@@ -1,10 +1,10 @@
 @echo off
 setlocal enabledelayedexpansion
 
-set _wsearch=winget search %~1
+set _wsearch=winget search %~1 --accept-source-agreements
 for /f "tokens=* delims=(=" %%s in ('!_wsearch! ^|find /I /c " %~1 "') do (
 	if %%s EQU 1 (
-		set _wlist=winget list --id %~1
+		set _wlist=winget list --id %~1 --accept-source-agreements
 		for /f "tokens=* delims=(=" %%f in ('!_wlist! ^|find /I /c " %~1 "') do (
 			if %%f EQU 0 (
 				echo [36mWINGET    : Installing %~1 [0m
@@ -12,7 +12,7 @@ for /f "tokens=* delims=(=" %%s in ('!_wsearch! ^|find /I /c " %~1 "') do (
 				exit /b 0
 			) else (
 				echo [36mWINGET    : Upgrading %~1 [0m
-				winget upgrade %~1
+				winget upgrade %~1 --accept-package-agreements --accept-source-agreements
 				exit /b 1
 			)
 		)
