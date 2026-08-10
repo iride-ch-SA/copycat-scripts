@@ -128,5 +128,11 @@ and it is written to the Security event log when command line auditing is enable
 
 Passing the password directly still works for backward compatibility and prints a warning.
 
+**random** refuses to run when PowerShell transcription is enabled by policy, on the machine or on the
+user, because everything shown on screen is written to the transcript file. The script reports the
+policy key and the transcript folder, and asks to change the password with another tool. `-force` runs
+it anyway, when the transcript is acceptable and is handled as a secret. A transcript started by hand
+with `Start-Transcript` cannot be detected.
+
 `cats clean User` and `cats clean itadmin` always use **random**, and leave the account enabled and
 with no expiration date.

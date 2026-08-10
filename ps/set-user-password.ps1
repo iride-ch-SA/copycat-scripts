@@ -3,6 +3,7 @@ param(
 	[ValidateSet("ask", "random")]
 	[string]$mode = "random",
 	[switch]$create,
+	[switch]$force,
 	[int]$length = 16
 )
 
@@ -15,6 +16,11 @@ param(
 #    -create      : the account is created instead of updated
 #  The account is always left enabled and with no expiration.
 #  Nothing is written to disk: no log, no file, no clipboard.
+#  With -mode random the script refuses to run when PowerShell
+#  transcription is enabled by policy, because everything shown
+#  on screen is written to the transcript file. Use -force to
+#  run anyway. A transcript started by hand with Start-Transcript
+#  cannot be detected and is not covered by this check.
 # ============================================================
 
 if (-not $username) {
@@ -88,6 +94,46 @@ function Read-SecureText {
 	Finally {
 		[Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer)
 	}
+}
+
+function Get-TranscriptionPolicy {
+	# The machine policy and the user policy are two distinct keys,
+	# either one is enough to have every line of output written to disk
+	$keys = @(
+		"HKLM:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\Transcription",
+		"HKCU:\SOFTWARE\Policies\Microsoft\Windows\PowerShell\Transcription"
+	)
+
+	foreach ($key in $keys) {
+		$policy = Get-ItemProperty -Path $key -ErrorAction SilentlyContinue
+		if ($policy -and $policy.EnableTranscripting -eq 1) {
+			return [PSCustomObject]@{
+				Key       = $key
+				Directory = $policy.OutputDirectory
+			}
+		}
+	}
+
+	return $null
+}
+
+$transcription = Get-TranscriptionPolicy
+
+if ($mode -eq "random" -and $transcription -and -not $force) {
+	Write-Host "ERROR: PowerShell transcription is enabled by policy on this machine." -ForegroundColor Red
+	Write-Host "       Policy key  : $($transcription.Key)"
+	if ($transcription.Directory) {
+		Write-Host "       Transcripts : $($transcription.Directory)"
+	}
+	Write-Host "       A generated password shown on screen would be written to the transcript file."
+	Write-Host "       Change the password with another tool, or run this script again with -force" -ForegroundColor Yellow
+	Write-Host "       if the transcript is acceptable and will be handled as a secret." -ForegroundColor Yellow
+	exit 3
+}
+
+if ($mode -eq "ask" -and $transcription) {
+	Write-Host "NOTE: PowerShell transcription is enabled, but a typed password is never echoed" -ForegroundColor Yellow
+	Write-Host "      and does not reach the transcript. Only the prompts do." -ForegroundColor Yellow
 }
 
 $exists = $null -ne (Get-LocalUser -Name $username -ErrorAction SilentlyContinue)
