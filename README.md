@@ -1,19 +1,32 @@
 # Copy Cat (OS Base Templates for Deployment)
-[Official Page](https://www.iride.ch/products/cats)
+[Pagina ufficiale](https://www.iride.ch/products/cats)
 
-Copy Cat(s) are carefully prepared and thoroughly documented windows templates for rapid and repeated deployment on a variety of heterogeneous hardware. Bases installs are done on dedicated virtual infrastructures and regularly updated and refreshed to grant consistent and reliable deploys.
-They are regularly used for distribution of Windows images on hardware supplied to our customers and extensively tested in real use conditions.
+I Copy Cat sono template Windows preparati e documentati per il deploy rapido e ripetuto su hardware
+eterogeneo. Le installazioni di base sono realizzate su infrastrutture virtuali dedicate, aggiornate e
+rinfrescate periodicamente per garantire deploy coerenti e affidabili. Sono usati per la distribuzione
+di immagini Windows sull'hardware fornito alla clientela e provati in condizioni d'uso reali.
 
-## About Copy Cat Scripts
-Scripts are a set of tools used and maintained to manage and deploy the Copy Cat(s) templates to Wild Cat(s) hardwares.
-Git is used to have a fancy update system and maintain the scripts set into multiples VM and deployed hardwares (Wild Cats) for testing and production use.
+Le macchine su cui un Copy Cat viene deployato si chiamano **Wild Cat**.
 
-## How to use
-Run on an administrative cmd terminal:
+## Copy Cat Scripts
+Copy Cat Scripts è l'insieme di strumenti con cui i template Copy Cat vengono applicati e mantenuti
+sulle Wild Cat. Git è il sistema di aggiornamento: gli stessi script vivono su più macchine virtuali e
+su tutto l'hardware deployato, in prova e in produzione.
+
+**Ogni commit su `main` è un rilascio.** `cats update Scripts` esegue un `git pull` su
+`C:\Admin\Scripts`, quindi qualunque modifica pubblicata raggiunge tutte le Wild Cat al primo
+aggiornamento. Non esiste uno stadio intermedio.
+
+Il repository è **pubblico**: non vi si scrive nulla di riservato — credenziali reali, percorsi interni,
+indirizzi, chiavi di attivazione, identificativi di tenant. Ciò che viene committato resta nella storia
+anche se rimosso in seguito.
+
+## Installazione
+Da un terminale cmd **amministrativo**:
 ```bash
 winget install --id Git.Git -e --source winget
 ```
-Close cmd, open it again (git should be added in path).
+Chiudere cmd e riaprirlo, così che `git` sia nel path.
 
 ```bash
 git clone https://github.com/iride-ch-SA/copycat-scripts.git C:\Admin\Scripts
@@ -21,26 +34,36 @@ git clone https://github.com/iride-ch-SA/copycat-scripts.git C:\Admin\Scripts
 ```bash
 C:\Admin\Scripts\cats prepare Cats.Scripts
 ```
-Close cmd again, now Cats is added to the path
+Chiudere di nuovo cmd: ora `cats` è nel PATH di sistema e si invoca da qualunque cartella.
 
-## Cats Utils
-- cmda : Run cmd as Administrator
+Quasi tutti i comandi `cats` modificano lo stato della macchina e vanno eseguiti da un prompt elevato.
 
-## Cats Command
-### Use Cats to run Copy Cat tools
+## Utility
+- **cmda** : apre un cmd come Amministratore
+
+## Il comando cats
 ```bash
-  cats [install|uninstall|update|prepare|clean|set|create] [options]
+  cats [install|update|prepare|clean|create] [parametri]
 ```
-### Shortening 
-Cats commands are all about shortening (operations, time, command, ...), they are continuosly developed to be as easy and efficient as possible.
-#### Uppercase and lowercase
-Casing in cats command is completely irrelevant, for reading purposes in guides we use Upper- and lower-case in cats-commands.
-#### Cats. Recipes
-Every Cats.Recipe is shortable in commands:
-***cats update Cats.Scripts*** is fully equivalent to ***cats update Scripts***
+Alla prima esecuzione per ciascun utente, `cats` accetta i contratti delle origini winget: senza,
+il primo comando che interroga winget si fermerebbe su una domanda interattiva.
 
-### cats install [recipe|shortcut|winget-name]
-#### Recipes
+I verbi `uninstall`, `set` e `backup` sono dichiarati nel dispatcher ma **non sono implementati**.
+
+### Abbreviazione
+I comandi cats sono pensati per accorciare tutto: operazioni, tempo, digitazione.
+
+#### Maiuscole e minuscole
+Sono irrilevanti. Nelle guide si usano maiuscole e minuscole solo per leggibilità.
+
+#### Cats.Recipe
+Ogni Cats.Recipe è abbreviabile nei comandi: ***cats update Cats.Scripts*** equivale a
+***cats update Scripts***.
+
+---
+
+### cats install [ricetta|shortcut|nome-winget]
+#### Ricette
 - Acronis.Agent
 - Adobe.Acrobat.Reader
 - BgInfo
@@ -49,95 +72,184 @@ Every Cats.Recipe is shortable in commands:
 - G360.Support
 - Google.GWSMO
 - Microsoft.Office
-#### Shortcuts
-- Chrome
-- Firefox
-- VLC
-- intelDASA
-- gDrive
-- qGIS
-- WireGuard
-- WindowsApp
-- GWSMO
-- Acrobat
-#### Usage
-- **cats install BgInfo** : Install BgInfo in C:\Admin\Apps
+#### Shortcut
+- Chrome, Firefox, VLC, intelDASA, gDrive, qGIS, WireGuard, WindowsApp
+- GWSMO, Acrobat : rimandano alle ricette omonime
+#### Uso
+- **cats install BgInfo** : installa BgInfo in `C:\Admin\Apps` e ne concede l'esecuzione agli utenti
+- **cats install Chrome** : installa il pacchetto winget corrispondente allo shortcut
+- **cats install 7zip.7zip** : un nome non riconosciuto come ricetta o shortcut viene passato
+  direttamente a winget
 
-### cats prepare [recipe|shortcut]
-#### Recipes
+Per i pacchetti che arrivano da winget, l'origine viene interrogata prima di procedere: se il pacchetto
+risulta già presente viene aggiornato anziché reinstallato, e se il nome corrisponde a più pacchetti
+l'operazione si ferma con un errore. Le ricette che scaricano un proprio installatore — Acronis.Agent,
+Google.GWSMO, G360.Support — non passano da winget.
+
+### cats update [ricetta|shortcut]
+#### Ricette
+- Cats.Scripts
+- Microsoft.Office
+#### Shortcut
+- Windows
+#### Uso
+- **cats update Scripts** : aggiorna Cats.Scripts dal repository git
+- **cats update Scripts reset** : ripristina `C:\Admin\Scripts` cancellando la cartella e riclonando
+- **cats update Microsoft.Office** : avvia l'aggiornamento della suite Microsoft 365
+- **cats update Windows** : aggiornamenti winget e aggiornamenti di Windows
+
+### cats prepare [ricetta|shortcut]
+#### Ricette
 - Cats.AdminFolders
 - Cats.Scripts
 - Cats.Utils
 - User
-#### Shortcuts
-- win-updates : prepares Windows for use the **cats update windows** command
+#### Shortcut
+- win-updates
 - deploy-azure
-#### Usage
-- **cats prepare AdminFolders** : Create Admin folder structure
-- **cats prepare Utils** : Set cleanmgr sageset:1, Disable widget menu bar, Reset Power Settings
-- **cats prepare win-updates** : Prepare PSModule e Nuget to permit updates with cats commmands
-- **cats prepare deploy-azure** : Prepare login screen for Azure / 365 users
+#### Uso
+- **cats prepare AdminFolders** : crea la struttura di cartelle `C:\Admin`
+- **cats prepare Scripts** : aggiorna gli script e aggiunge `C:\Admin\Scripts` al PATH di sistema
+- **cats prepare Utils** : imposta `cleanmgr /sageset:1`, disabilita il menu widget, azzera il
+  risparmio energetico
+- **cats prepare User** *nomeutente* [show|hide] : mostra o nasconde l'utente nella schermata di accesso
+- **cats prepare win-updates** : prepara NuGet e PSWindowsUpdate, necessari a **cats update Windows**
+- **cats prepare deploy-azure** : prepara la schermata di accesso per utenti Azure / 365 e nasconde
+  `itadmin`
 
-### cats update [recipe]
-#### Recipes
-- Cats.Scripts
-#### Shortcuts
-- Windows
-#### Usage
-- **cats update Scripts** : Update Cats.Scripts from git source
-- **cats update Scripts reset** : Fully reset C:\Admin\Scripts folder by deleting and cloning from git source
-- **cats update windows** : Do winget updates and windows update
+**cats prepare Utils** è interattivo: apre la finestra di Pulizia disco perché l'operatore scelga cosa
+includere nel profilo `sageset:1`, e attende un tasto.
 
-### cats create [recipe|shortcut]
-#### Recipes
+### cats create [ricetta|shortcut]
+#### Ricette
 - User
-#### Shortcuts
+- HID
+#### Shortcut
 - Admin
+#### Uso
+- **cats create User** *nomeutente* : crea l'utente e chiede la password
+- **cats create Admin** *nomeutente* : lo stesso, con l'utente in Administrators
+- **cats create HID** : calcola l'identificativo hardware della macchina e lo scrive in
+  `C:\Admin\Others\HID.txt`
 
-### cats clean [recipe|shortcut]
-#### Recipes
+### cats clean [ricetta|shortcut]
+#### Ricette
 - User
-#### Shortcuts
-- disks : cleanmgr with sagerun:1
-- sfc : sfc /scannow
-- dism-online : analyse, clean and restore the component store
-- network : release, renew, flush dns and set the profile to Private
-- win-updates : stop the update services, empty SoftwareDistribution and reboot
-- wildcat-deploy : remove the VM drivers
-- itadmin : new password for the itadmin account
-#### Usage
-- **cats clean itadmin** : replace the itadmin password with a new random one
-- **cats clean itadmin ask** : the same, with the password typed instead of generated
-- **cats clean User** *username* [ask|random] : the same, for any local user
+#### Shortcut
+- disks : Pulizia disco con il profilo `sagerun:1`
+- sfc : `sfc /scannow`
+- dism-online : analisi, pulizia e ripristino dell'archivio componenti
+- network : rilascio e rinnovo IP, svuotamento cache DNS, profilo di rete su Privata
+- win-updates : ferma i servizi di aggiornamento, svuota `SoftwareDistribution` e riavvia
+- wildcat-deploy : rimuove i driver della macchina virtuale
+- itadmin : nuova password per l'account `itadmin`
+#### Uso
+- **cats clean itadmin** : sostituisce la password di `itadmin` con una nuova password casuale
+- **cats clean itadmin ask** : lo stesso, con la password digitata anziché generata
+- **cats clean User** *nomeutente* [ask|random] : lo stesso, per qualunque utente locale
+
+**cats clean win-updates** riavvia la macchina al termine.
+
+---
 
 ## Cats Recipes
+
 ### User
-- cats create User *username* [*password*|ask|random] [Administrators hide]|[no-rdp]
-- cats create Admin *username* [*password*|ask|random] [hide]
-- cats prepare User *username* [show|hide]
-- cats clean User *username* [ask|random]
+- cats create User *nomeutente* [*password*|ask|random] [Administrators hide]|[no-rdp]
+- cats create Admin *nomeutente* [*password*|ask|random] [hide]
+- cats prepare User *nomeutente* [show|hide]
+- cats clean User *nomeutente* [ask|random]
 
-#### Passwords
-The password must never be typed on the command line: it becomes an argument of `net.exe`, readable in
-the command line column of Task Manager, by `wmic process get commandline` and by any endpoint agent,
-and it is written to the Security event log when command line auditing is enabled.
+Senza opzioni l'utente viene aggiunto al gruppo Utenti desktop remoto. Con `no-rdp` non viene aggiunto
+a nessun gruppo, con `Administrators` entra fra gli amministratori, e in quel caso `hide` lo nasconde
+anche dalla schermata di accesso.
 
-**The password argument is optional.** `cats create User john` behaves as `cats create User john ask`,
-and the same holds when only the options are given: `cats create Admin john hide` asks for the password
-too. The two explicit forms are:
+#### Password
+La password non va mai digitata nella riga di comando: diventa un argomento di `net.exe`, leggibile
+nella colonna «Riga di comando» di Gestione attività, con `wmic process get commandline` e da qualunque
+agente di sicurezza installato, e finisce nel registro Sicurezza (evento 4688) sulle macchine dove è
+attivo l'auditing delle righe di comando.
 
-- **ask** : the password is typed twice and never shown;
-- **random** : a 16 character password is generated with lower case, upper case, digits and special
-  characters, shown once and stored nowhere. Copy it into the password manager before pressing Enter,
-  the console is cleared afterwards.
+**L'argomento password è facoltativo.** `cats create User mario` equivale a `cats create User mario ask`,
+e lo stesso vale quando si indicano solo le opzioni: anche `cats create Admin mario hide` chiede la
+password. Le due forme esplicite sono:
 
-Passing the password directly still works for backward compatibility and prints a warning.
+- **ask** : la password si digita due volte e non compare mai a schermo;
+- **random** : viene generata una password di 16 caratteri con minuscole, maiuscole, cifre e caratteri
+  speciali, mostrata una sola volta e non conservata da nessuna parte. Va copiata nel gestore delle
+  password prima di premere Invio; subito dopo la console viene pulita.
 
-**random** refuses to run when PowerShell transcription is enabled by policy, on the machine or on the
-user, because everything shown on screen is written to the transcript file. The script reports the
-policy key and the transcript folder, and asks to change the password with another tool. `-force` runs
-it anyway, when the transcript is acceptable and is handled as a secret. A transcript started by hand
-with `Start-Transcript` cannot be detected.
+Passare la password direttamente continua a funzionare per compatibilità e produce un avviso.
 
-`cats clean User` and `cats clean itadmin` take the same two keywords and default to **random** when
-none is given. In both cases the account is left enabled and with no expiration date.
+**random** si rifiuta di procedere se sulla macchina è attiva la trascrizione di PowerShell, per policy
+di macchina o di utente: ogni riga mostrata a schermo finirebbe nel file di trascrizione. Lo script
+riporta la chiave di policy e la cartella delle trascrizioni, e invita a cambiare la password con un
+altro strumento. Il commutatore `-force` esegue comunque, quando la trascrizione è accettabile e viene
+trattata come materiale segreto. Una trascrizione avviata a mano con `Start-Transcript` non è
+rilevabile.
+
+`cats clean User` e `cats clean itadmin` accettano le stesse due parole chiave e usano **random** se non
+se ne indica nessuna. In entrambi i casi l'account resta attivo e senza data di scadenza.
+
+### Cats.AdminFolders
+Crea, se mancanti, `C:\Admin` e le sottocartelle `Apps`, `Drivers`, `Installers`, `Others`.
+
+### Cats.Base
+Installa il corredo di base: Chrome, Firefox, VLC, Adobe Acrobat Reader.
+
+### Cats.Utils
+- **install** : BgInfo e Acronis Agent
+- **prepare** : profilo di Pulizia disco, disattivazione del menu widget, reset del risparmio energetico
+
+### Cats.Scripts
+- **prepare** : aggiorna gli script e aggiunge `C:\Admin\Scripts` al PATH **di sistema**, senza toccare
+  il PATH dell'utente e senza duplicare la voce se già presente
+- **update** : `git pull`; con `reset` cancella la cartella e riclona
+
+### Microsoft.Office
+- **install** : installa Microsoft 365 Apps tramite Office Deployment Tool, con la configurazione
+  `C:\Admin\Others\office.xml` se presente, altrimenti `C:\Admin\Scripts\config\office.xml`
+- **update** : avvia l'aggiornamento della suite già installata
+
+L'installazione è completamente silenziosa: `Display Level="None"` sopprime ogni interfaccia e barra di
+avanzamento. Il prompt resta muto per 10–30 minuti mentre l'installazione scarica e procede. Non è un
+blocco.
+
+### HID
+Calcola un identificativo hardware della macchina come SHA-256 di numero di serie del BIOS, id del
+processore, indirizzi MAC delle schede di rete fisiche, seriali dei banchi di memoria e dei dischi.
+`cats create HID` lo scrive in `C:\Admin\Others\HID.txt`.
+
+### Acronis.Agent, Google.GWSMO, G360.Support
+Scaricano il rispettivo installatore ed eseguono l'installazione. G360.Support crea inoltre il
+collegamento «Supporto IT» sul desktop di tutti gli utenti.
+
+---
+
+## Script fuori dal comando cats
+Si invocano direttamente da `C:\Admin\Scripts`.
+
+| Script | Funzione |
+|---|---|
+| `sysprep.bat` | Esegue sysprep in generalize/oobe/shutdown con `config\autounattend.xml` |
+| `rm-winget-source.bat` | Rimuove il pacchetto Microsoft.Winget.Source, per utente e da provisioning: **necessario prima di sysprep**, che altrimenti fallisce. Non riavviare fra questo script e sysprep |
+| `rename-pc.bat` | Assegna un nome casuale `PC-XXXXXXXXX` e riavvia |
+| `set-path.bat` | Aggiunge `C:\Admin\Scripts` al PATH di sistema. Forma storica, sostituita da `cats prepare Scripts` |
+| `set-background.bat` | Applica lo sfondo BgInfo. Con `get [nome]` scarica prima l'immagine, con `remove` la elimina |
+| `set-registry.bat` | Impostazioni di registro per ambiti: `news-and-interests`, `aad-users`, `local-user`, `wireguard-nonadmin-users` |
+| `set-permissions.bat` | Permessi su file installati. Oggi il solo ambito `bginfo` |
+| `reset-power-settings.bat` | Disattiva sospensione, ibernazione e spegnimento dello schermo in alimentazione di rete |
+| `permit-wireguard-to-user.bat` | Abilita un utente non amministratore all'uso di WireGuard |
+| `hasher.bat` | Calcola lo SHA-256 di un file e lo salva in un `.hash` accanto, oppure lo verifica se il `.hash` esiste già |
+| `do-acronis-hash.bat` | Applica `hasher.bat` al primo file `.tib` trovato in `A:\` |
+| `do-updates.bat` | Aggiornamenti completi: script, winget, Office, Windows. Con `git-only` o `git-reset` si ferma agli script |
+| `do-update-gitonly.bat` | Scorciatoia per `do-updates.bat git-only` |
+| `userlogin.bat` | Eseguito a ogni accesso: applica lo sfondo e richiama gli script locali eventualmente presenti in `C:\Admin\Others` |
+| `deploy-userlogin.bat` | Registra `userlogin.bat` come operazione pianificata all'accesso |
+
+## Contenuto di config
+| File | Funzione |
+|---|---|
+| `autounattend.xml` | Risposte per l'installazione non presidiata e per sysprep |
+| `office.xml` | Configurazione dell'Office Deployment Tool: Microsoft 365 Apps, 64 bit, canale Current, lingua italiana |
+| `background.bgi`, `solid-color.bgi`, `itadmin.bgi` | Profili BgInfo |
