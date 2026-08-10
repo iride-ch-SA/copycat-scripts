@@ -54,7 +54,7 @@ for %%a in (%*) do (
 		if /I not "%~1"=="User" (
 			echo [36mSHORTCUT  : New random password for the itadmin account [0m
 			if exist C:\Admin\Scripts\cats-recipes\User.bat (
-				call "C:\Admin\Scripts\cats-recipes\User.bat" clean itadmin
+				call "C:\Admin\Scripts\cats-recipes\User.bat" clean itadmin "%~2"
 			)
 		)
 	)

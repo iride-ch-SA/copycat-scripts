@@ -104,17 +104,18 @@ Every Cats.Recipe is shortable in commands:
 - network : release, renew, flush dns and set the profile to Private
 - win-updates : stop the update services, empty SoftwareDistribution and reboot
 - wildcat-deploy : remove the VM drivers
-- itadmin : new random password for the itadmin account
+- itadmin : new password for the itadmin account
 #### Usage
 - **cats clean itadmin** : replace the itadmin password with a new random one
-- **cats clean User** *username* : the same, for any local user
+- **cats clean itadmin ask** : the same, with the password typed instead of generated
+- **cats clean User** *username* [ask|random] : the same, for any local user
 
 ## Cats Recipes
 ### User
 - cats create User *username* [*password*|ask|random] [Administrators hide]|[no-rdp]
 - cats create Admin *username* [*password*|ask|random] [hide]
 - cats prepare User *username* [show|hide]
-- cats clean User *username*
+- cats clean User *username* [ask|random]
 
 #### Passwords
 The password must never be typed on the command line: it becomes an argument of `net.exe`, readable in
@@ -138,5 +139,5 @@ policy key and the transcript folder, and asks to change the password with anoth
 it anyway, when the transcript is acceptable and is handled as a secret. A transcript started by hand
 with `Start-Transcript` cannot be detected.
 
-`cats clean User` and `cats clean itadmin` always use **random**, and leave the account enabled and
-with no expiration date.
+`cats clean User` and `cats clean itadmin` take the same two keywords and default to **random** when
+none is given. In both cases the account is left enabled and with no expiration date.

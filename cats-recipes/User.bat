@@ -64,10 +64,28 @@ if /I "%~1"=="clean" (
 		exit /b 1
 	)
 
-	echo [36mRECIPE    : New random password, account enabled and without expiration date [0m
-	powershell -noprofile -executionpolicy bypass -command C:\Admin\Scripts\ps\set-user-password.ps1 "%~2" random
-	if errorlevel 1 exit /b 1
-	exit /b 0
+	rem With no third parameter the password is generated
+	if "%~3"=="" (
+		call "%~f0" clean "%~2" random
+		exit /b
+	)
+
+	if /I "%~3"=="ask" (
+		echo [36mRECIPE    : Password typed without being shown, account enabled and without expiration date [0m
+		powershell -noprofile -executionpolicy bypass -command C:\Admin\Scripts\ps\set-user-password.ps1 "%~2" ask
+		if errorlevel 1 exit /b 1
+		exit /b 0
+	)
+
+	if /I "%~3"=="random" (
+		echo [36mRECIPE    : New random password, account enabled and without expiration date [0m
+		powershell -noprofile -executionpolicy bypass -command C:\Admin\Scripts\ps\set-user-password.ps1 "%~2" random
+		if errorlevel 1 exit /b 1
+		exit /b 0
+	)
+
+	echo [31mERROR     : The third parameter must be ask or random [0m
+	exit /b 1
 )
 
 if /I "%~1"=="prepare" (
