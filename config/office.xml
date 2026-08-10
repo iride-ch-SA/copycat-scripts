@@ -13,12 +13,14 @@
 	</Product>
   </Add>
 
-  <!-- Rimuove eventuali versioni Office (MSI) preesistenti -->
-  <RemoveMSI All="True" />
+  <!-- Rimuove eventuali versioni Office (MSI) preesistenti.
+       Nessun attributo: RemoveMSI rimuove per default tutti i prodotti MSI.
+       L’attributo All non è nello schema ODT corrente -->
+  <RemoveMSI />
 
   <!-- Installazione completamente silenziosa e accetta la licenza -->
   <Display Level="None" AcceptEULA="TRUE" />
 
-  <!-- Facoltativo: attiva Office automaticamente se associato a un account 365 -->
-  <Property Name="AUTOACTIVATE" Value="1" />
+  <!-- AUTOACTIVATE rimosso: Microsoft 365 Apps si attiva gia automaticamente e la
+       documentazione ODT sconsiglia di impostare la proprieta per questi prodotti -->
 </Configuration>
