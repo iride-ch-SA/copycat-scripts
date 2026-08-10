@@ -1,8 +1,9 @@
 @echo off
+setlocal enabledelayedexpansion
 
 if "%~1"=="install" (
 	winget list --id Microsoft.Office | find /I "Microsoft 365 Apps for enterprise" > nul
-	if %errorlevel% NEQ 0 (
+	if !errorlevel! NEQ 0 (
 		call C:\Admin\Scripts\cats-install-winget.bat Microsoft.OfficeDeploymentTool
 		timeout /t 5 /nobreak > NUL
 		if exist "C:\Program Files\OfficeDeploymentTool\setup.exe" (
@@ -25,13 +26,13 @@ if "%~1"=="install" (
 			exit /b 2
 		)
 	) else (
-		call ::update
+		call "%~f0" update
 		exit /b 1
 	)
 )
 
 if "%~1"=="update" (
-	::update
+	rem Aggiornamento della suite gia installata
 	echo [36mMSOFFICE  : Upgrading %~1 [0m
 	"C:\Program Files\Common Files\Microsoft Shared\ClickToRun\OfficeC2RClient.exe" /update user displaylevel=false forceappshutdown=true
 	exit /b 0
