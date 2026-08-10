@@ -33,7 +33,11 @@ if "%~1"=="install" (
 
 if "%~1"=="update" (
 	rem Aggiornamento della suite gia installata
-	echo [36mMSOFFICE  : Upgrading %~1 [0m
+	if not exist "C:\Program Files\Common Files\Microsoft Shared\ClickToRun\OfficeC2RClient.exe" (
+		echo [31mERROR     : OfficeC2RClient.exe not found, Office is not a Click-to-Run installation[0m
+		exit /b 2
+	)
+	echo [36mMSOFFICE  : Upgrade of Microsoft 365 Apps started in background [0m
 	"C:\Program Files\Common Files\Microsoft Shared\ClickToRun\OfficeC2RClient.exe" /update user displaylevel=false forceappshutdown=true
 	exit /b 0
 )
