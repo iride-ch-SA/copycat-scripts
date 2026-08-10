@@ -4,7 +4,7 @@ setlocal enabledelayedexpansion
 if "%~1"=="install" (
 	winget list --id Microsoft.Office | find /I "Microsoft 365 Apps for enterprise" > nul
 	if !errorlevel! NEQ 0 (
-		call C:\Admin\Scripts\cats-install-winget.bat Microsoft.OfficeDeploymentTool
+		call C:\Admin\Scripts\cats-install-winget.bat Microsoft.OfficeDeploymentTool --silent
 		timeout /t 5 /nobreak > NUL
 		if exist "C:\Program Files\OfficeDeploymentTool\setup.exe" (
 			if exist "C:\Admin\Others\office.xml" (
