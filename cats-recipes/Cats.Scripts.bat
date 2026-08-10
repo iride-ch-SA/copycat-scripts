@@ -4,11 +4,7 @@ if /I "%~1"=="prepare" (
 	if exist "C:\Admin\Scripts" (
 		call "%~f0" update
 		echo [32mRECIPE    : Add C:\Admin\Scripts to System PATH [0m
-		if "%PATH:C:\Admin\Scripts=%"=="%PATH%" (
-			setx PATH "%PATH%;C:\Admin\Scripts" /M
-		) else (
-			echo [36mRECIPE    : C:\Admin\Scripts is already in PATH, nothing to do [0m
-		)
+		powershell -noprofile -executionpolicy bypass -command C:\Admin\Scripts\ps\add-system-path.ps1 "C:\Admin\Scripts"
 		exit /b 0
 	)
 )
