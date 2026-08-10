@@ -50,6 +50,15 @@ for %%a in (%*) do (
 		shutdown /r /t 0 
 	)
 	
+	if /I "%%a"=="itadmin" (
+		if /I not "%~1"=="User" (
+			echo [36mSHORTCUT  : New random password for the itadmin account [0m
+			if exist C:\Admin\Scripts\cats-recipes\User.bat (
+				call "C:\Admin\Scripts\cats-recipes\User.bat" clean itadmin
+			)
+		)
+	)
+	
 	if /I "%%a"=="wildcat-deploy" (
 		echo [36mSHORTCUT  : Remove VM drivers [0m
 		winget uninstall RedHat.VirtIO --accept-source-agreements

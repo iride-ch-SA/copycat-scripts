@@ -94,8 +94,39 @@ Every Cats.Recipe is shortable in commands:
 #### Shortcuts
 - Admin
 
+### cats clean [recipe|shortcut]
+#### Recipes
+- User
+#### Shortcuts
+- disks : cleanmgr with sagerun:1
+- sfc : sfc /scannow
+- dism-online : analyse, clean and restore the component store
+- network : release, renew, flush dns and set the profile to Private
+- win-updates : stop the update services, empty SoftwareDistribution and reboot
+- wildcat-deploy : remove the VM drivers
+- itadmin : new random password for the itadmin account
+#### Usage
+- **cats clean itadmin** : replace the itadmin password with a new random one
+- **cats clean User** *username* : the same, for any local user
+
 ## Cats Recipes
 ### User
-- cats create User *username* *password* [Administrators hide]|[no-rdp]
-- cats create Admin *username* *password* [hide]
+- cats create User *username* *password*|ask|random [Administrators hide]|[no-rdp]
+- cats create Admin *username* *password*|ask|random [hide]
 - cats prepare User *username* [show|hide]
+- cats clean User *username*
+
+#### Passwords
+The password must never be typed on the command line: it becomes an argument of `net.exe`, readable in
+the command line column of Task Manager, by `wmic process get commandline` and by any endpoint agent,
+and it is written to the Security event log when command line auditing is enabled. Use one of:
+
+- **ask** : the password is typed twice and never shown;
+- **random** : a 16 character password is generated with lower case, upper case, digits and special
+  characters, shown once and stored nowhere. Copy it into the password manager before pressing Enter,
+  the console is cleared afterwards.
+
+Passing the password directly still works for backward compatibility and prints a warning.
+
+`cats clean User` and `cats clean itadmin` always use **random**, and leave the account enabled and
+with no expiration date.
