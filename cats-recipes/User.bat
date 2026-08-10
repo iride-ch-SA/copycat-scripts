@@ -7,9 +7,23 @@ if /I "%~1"=="create" (
 		exit /b 1
 	)
 
+	rem With no password given the option keywords slide into the password
+	rem slot, so the arguments are normalised and the recipe is called again
 	if "%~3"=="" (
-		echo [31mERROR     : You must specify a password, or ask, or random, as third parameter [0m
-		exit /b 1
+		call "%~f0" create "%~2" ask
+		exit /b
+	)
+	if /I "%~3"=="Administrators" (
+		call "%~f0" create "%~2" ask Administrators "%~4"
+		exit /b
+	)
+	if /I "%~3"=="no-rdp" (
+		call "%~f0" create "%~2" ask no-rdp
+		exit /b
+	)
+	if /I "%~3"=="hide" (
+		call "%~f0" create "%~2" ask "%~4" hide
+		exit /b
 	)
 
 	if /I "%~3"=="ask" (

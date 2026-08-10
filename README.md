@@ -111,15 +111,19 @@ Every Cats.Recipe is shortable in commands:
 
 ## Cats Recipes
 ### User
-- cats create User *username* *password*|ask|random [Administrators hide]|[no-rdp]
-- cats create Admin *username* *password*|ask|random [hide]
+- cats create User *username* [*password*|ask|random] [Administrators hide]|[no-rdp]
+- cats create Admin *username* [*password*|ask|random] [hide]
 - cats prepare User *username* [show|hide]
 - cats clean User *username*
 
 #### Passwords
 The password must never be typed on the command line: it becomes an argument of `net.exe`, readable in
 the command line column of Task Manager, by `wmic process get commandline` and by any endpoint agent,
-and it is written to the Security event log when command line auditing is enabled. Use one of:
+and it is written to the Security event log when command line auditing is enabled.
+
+**The password argument is optional.** `cats create User john` behaves as `cats create User john ask`,
+and the same holds when only the options are given: `cats create Admin john hide` asks for the password
+too. The two explicit forms are:
 
 - **ask** : the password is typed twice and never shown;
 - **random** : a 16 character password is generated with lower case, upper case, digits and special
