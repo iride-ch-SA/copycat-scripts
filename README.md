@@ -71,11 +71,13 @@ Every Cats.Recipe can be abbreviated in commands: ***cats update Cats.Scripts***
 - G360.Support
 - Google.GWSMO
 - Microsoft.Office
+- TeamViewerQS
 #### Shortcuts
 - Chrome, Firefox, VLC, intelDASA, gDrive, qGIS, WireGuard, WindowsApp
 - GWSMO, Acrobat : aliases of the recipes of the same name
 #### Usage
 - **cats install BgInfo** : installs BgInfo into `C:\Admin\Apps` and grants users the right to run it
+- **cats install TeamViewerQS** : makes TeamViewer QuickSupport available to every user of the machine
 - **cats install Chrome** : installs the winget package matching the shortcut
 - **cats install 7zip.7zip** : a name that is neither a recipe nor a shortcut is passed straight to
   winget
@@ -83,7 +85,7 @@ Every Cats.Recipe can be abbreviated in commands: ***cats update Cats.Scripts***
 For packages coming from winget, the source is queried before proceeding: if the package is already
 present it is updated instead of reinstalled, and if the name matches more than one package the
 operation stops with an error. The recipes that download their own installer — Acronis.Agent,
-Google.GWSMO, G360.Support — do not go through winget.
+Google.GWSMO, G360.Support, TeamViewerQS — do not go through winget.
 
 ### cats update [recipe|shortcut]
 #### Recipes
@@ -220,6 +222,18 @@ disks. `cats create HID` writes it to `C:\Admin\Others\HID.txt`.
 They download their respective installer and run the installation. G360.Support also creates the "IT
 Support" shortcut on the desktop of all users.
 
+### TeamViewerQS
+- **install** : downloads the current TeamViewer QuickSupport from the vendor to
+  `C:\Admin\Apps\TeamViewerQS.exe`, grants the `Users` group the right to run it, and creates the
+  "TeamViewer QuickSupport" shortcut on the desktop of all users, `C:\Users\Public\Desktop`
+
+QuickSupport needs no installation and no administrator rights to run: a single executable in a
+machine-wide folder, readable and runnable by every user, is what "installed for all users" means here.
+The download always comes from `download.teamviewer.com` and not from the CopyCats bucket, because a
+QuickSupport module has to match the version of the supporter's TeamViewer: pinning a copy would age.
+Running the recipe again refreshes both the executable and the shortcut, so it is also the way to update
+it. Removal is manual: delete the shortcut and the executable.
+
 ---
 
 ## Scripts outside the cats command
@@ -233,7 +247,7 @@ They are called directly from `C:\Admin\Scripts`.
 | `set-path.bat` | Adds `C:\Admin\Scripts` to the system PATH. Legacy form, superseded by `cats prepare Scripts` |
 | `set-background.bat` | Applies the BgInfo wallpaper. With `get [name]` it downloads the image first, with `remove` it deletes it. When the machine defines no background at all — no `.bgi` profile and no `background.jpg` — it downloads the `Trust` image and applies it; the solid colour stays as the fallback if the download fails |
 | `set-registry.bat` | Registry settings by scope: `news-and-interests`, `aad-users`, `local-user`, `wireguard-nonadmin-users` |
-| `set-permissions.bat` | Permissions on installed files. Today the `bginfo` scope only |
+| `set-permissions.bat` | Permissions on installed files. Today the `bginfo` and `teamviewerqs` scopes |
 | `reset-power-settings.bat` | Disables sleep, hibernation and screen turn-off on AC power |
 | `permit-wireguard-to-user.bat` | Allows a non-administrator user to use WireGuard |
 | `hasher.bat` | Computes the SHA-256 of a file and saves it to a `.hash` alongside it, or verifies it if the `.hash` already exists |

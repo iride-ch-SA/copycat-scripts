@@ -6,3 +6,9 @@ IF /I "%PARAM%"=="bginfo" (
 		icacls "C:\Admin\Apps\bginfo.exe" /grant "Users:(RX)"
 	)
 )
+
+IF /I "%PARAM%"=="teamviewerqs" (
+	if exist "C:\Admin\Apps\TeamViewerQS.exe" (
+		icacls "C:\Admin\Apps\TeamViewerQS.exe" /grant "Users:(RX)"
+	)
+)
