@@ -21,6 +21,16 @@ if "%~1"=="remove" (
 	)
 )
 
+REM No background of any kind on this machine: download the default "Trust" image, so that
+REM a machine is never left without a wallpaper. Skipped after "remove", whose very purpose
+REM is to leave the machine without an image.
+if not "%~1"=="remove" IF NOT EXIST "C:\Admin\Scripts\config\%username%.bgi" IF NOT EXIST "C:\Admin\Others\%username%.bgi" IF NOT EXIST "C:\Admin\Others\background.bgi" IF NOT EXIST "C:\Admin\Others\background.jpg" (
+	echo [36mNo background defined on this machine, downloading the Trust background[0m
+	if not exist "C:\Admin\Others" ( mkdir C:\Admin\Others )
+	powershell -command "(new-object System.Net.WebClient).DownloadFile('https://storage.googleapis.com/01931185-232c-77a5-8e67-8751490ebf3e/CopyCats/Admin/Others/backgrounds/Trust.jpg','C:\Admin\Others\background.jpg')"
+	IF NOT EXIST "C:\Admin\Others\background.jpg" ( echo [33mWARNING: download of the Trust background failed, falling back to the solid color. [0m )
+)
+
 
 IF EXIST "C:\Admin\Scripts\config\%username%.bgi" (
 	echo [36mUsing a profile specific for user %username% found in C:\Admin\Scripts\config\%username%.bgi[0m
