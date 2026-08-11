@@ -7,7 +7,12 @@ if "%~1"=="install" (
 	powershell -command "(new-object System.Net.WebClient).DownloadFile('https://download.teamviewer.com/download/TeamViewerQS.exe','C:\Admin\Apps\TeamViewerQS.exe')"
 
 	if not exist "C:\Admin\Apps\TeamViewerQS.exe" (
-		echo [31mERROR     : Download of TeamViewer QuickSupport failed, nothing was installed [0m
+		echo [33mWARNING   : Direct download failed, falling back to winget [0m
+		call C:\Admin\Scripts\cats-install-winget.bat TeamViewer.TeamViewer.QuickSupport --location C:\Admin\Apps
+	)
+
+	if not exist "C:\Admin\Apps\TeamViewerQS.exe" (
+		echo [31mERROR     : TeamViewer QuickSupport could not be obtained, nothing was installed [0m
 		exit /b 2
 	)
 

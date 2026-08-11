@@ -85,7 +85,8 @@ Every Cats.Recipe can be abbreviated in commands: ***cats update Cats.Scripts***
 For packages coming from winget, the source is queried before proceeding: if the package is already
 present it is updated instead of reinstalled, and if the name matches more than one package the
 operation stops with an error. The recipes that download their own installer — Acronis.Agent,
-Google.GWSMO, G360.Support, TeamViewerQS — do not go through winget.
+Google.GWSMO, G360.Support, TeamViewerQS — do not go through winget, except TeamViewerQS which falls
+back to it when the vendor download fails.
 
 ### cats update [recipe|shortcut]
 #### Recipes
@@ -224,13 +225,19 @@ Support" shortcut on the desktop of all users.
 
 ### TeamViewerQS
 - **install** : downloads the current TeamViewer QuickSupport from the vendor to
-  `C:\Admin\Apps\TeamViewerQS.exe`, grants the `Users` group the right to run it, and creates the
-  "TeamViewer QuickSupport" shortcut on the desktop of all users, `C:\Users\Public\Desktop`
+  `C:\Admin\Apps\TeamViewerQS.exe` — falling back to winget if that download fails —, grants the `Users`
+  group the right to run it, and creates the "TeamViewer QuickSupport" shortcut on the desktop of all
+  users, `C:\Users\Public\Desktop`
 
 QuickSupport needs no installation and no administrator rights to run: a single executable in a
 machine-wide folder, readable and runnable by every user, is what "installed for all users" means here.
 The download always comes from `download.teamviewer.com` and not from the CopyCats bucket, because a
 QuickSupport module has to match the version of the supporter's TeamViewer: pinning a copy would age.
+The fallback installs `TeamViewer.TeamViewer.QuickSupport` with `--location C:\Admin\Apps`: the package
+is `portable` and its command alias is `TeamViewerQS`, so winget lands the executable at the very same
+path the rest of the recipe expects. It is a fallback and not the primary way because the winget manifest
+carries the same vendor URL plus a pinned SHA256, which fails while the manifest lags behind a new
+TeamViewer build; its one real gain is following the URL if the vendor ever changes it.
 Running the recipe again refreshes both the executable and the shortcut, so it is also the way to update
 it. Removal is manual: delete the shortcut and the executable.
 
