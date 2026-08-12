@@ -227,8 +227,9 @@ Support" shortcut on the desktop of all users.
 
 ### HPSA9
 - **install** : downloads HP Support Assistant 9 to `C:\Admin\Drivers\HP\HPSA9.exe`, silently
-  self-extracts it to `C:\Admin\Drivers\HP\HPSA9\` if not already extracted, runs the extracted
-  `InstallHPSA.exe /s`, then checks that the package really got provisioned
+  self-extracts it to `C:\Admin\Drivers\HP\HPSA9\` if not already extracted, then runs the extracted
+  `Setup.exe` **interactively** — the operator answers the wizard on screen —, and once it returns
+  checks that the package really got provisioned
 
 The download URL is pinned to a HP SoftPaq number (`sp163238`, version 9.47.41.0, effective
 2025-09-16), not to a stable vendor path: HP retires and supersedes SoftPaq numbers as new versions
@@ -236,14 +237,20 @@ ship, unlike TeamViewer's evergreen URL below. The recipe needs a periodic bump 
 
 HPSA 9 is a packaged app, not a classic installer: `InstallHPSA.exe` is a .NET launcher that calls
 `DISM /Online /Add-ProvisionedAppxPackage` on the `.appxbundle` shipped inside the SoftPaq, so the
-application only shows up at the next user logon. Its accepted switches, read from the binary itself,
-are `/s` `-s` (silent), `/h` `-h`, `/l` `-l` — all lowercase. The InstallShield-style `/S /v/qn` used
-until 2026-08-12 is **not** one of them: the recipe reported success while nothing was installed.
-The launcher also has preconditions of its own — HP hardware, no HPSA below 8.8 already installed, no
-Fusion service already running — and it exits quietly when they are not met, writing its reason to
-`%SystemDrive%\system.sav\logs\HPSA_Setup_*.txt` or, failing that, to
-`%SystemDrive%\Recovery\OEM\LOGS\SYSTEM.SAV\logs`. That is why the recipe no longer trusts the exit
-code and verifies the provisioned package instead, pointing at that log when the check fails.
+application only shows up at the next user logon. `Setup.exe` is the thin wrapper HP ships next to it:
+it checks the signature of `InstallHPSA.exe`, checks .NET 4.5 through `NetFramework45Installed.ps1`,
+looks for `-s` or `/s` on its own command line and then starts the launcher. **The recipe deliberately
+passes no switch**: unattended installation is not wanted here, the wrapper opens its interface and the
+operator answers it. Silent mode was tried until 2026-08-12 and abandoned.
+
+The launcher has preconditions of its own and refuses the install when they are not met, with a negative
+exit code: `-5` the two HP Fusion services `HPSysInfoCap` and `HPAppHelperCap` are missing or stopped,
+`-6` an HPSA older than 8.8 is installed and cannot be upgraded, `-8` and `-9` an unsupported Windows
+build or architecture. HPSA 9 does **not** install those services, it requires them: HP factory images
+carry them, a machine imaged from a template does not. The recipe therefore warns when `HPSysInfoCap` is
+absent — without stopping, the decision is the operator's — and after the wizard it verifies the
+provisioned package rather than trusting an exit code, translating the negative codes and pointing at
+`system.sav\logs\HPSASetUpCpp.txt` on the system drive, which `Setup.exe` writes.
 
 ### TeamViewerQS
 - **install** : downloads the current TeamViewer QuickSupport from the vendor to
