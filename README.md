@@ -227,16 +227,23 @@ Support" shortcut on the desktop of all users.
 
 ### HPSA9
 - **install** : downloads HP Support Assistant 9 to `C:\Admin\Drivers\HP\HPSA9.exe`, silently
-  self-extracts it to `C:\Admin\Drivers\HP\HPSA9\`, then runs the extracted `InstallHPSA.exe /S /v/qn`
+  self-extracts it to `C:\Admin\Drivers\HP\HPSA9\` if not already extracted, runs the extracted
+  `InstallHPSA.exe /s`, then checks that the package really got provisioned
 
 The download URL is pinned to a HP SoftPaq number (`sp163238`, version 9.47.41.0, effective
 2025-09-16), not to a stable vendor path: HP retires and supersedes SoftPaq numbers as new versions
 ship, unlike TeamViewer's evergreen URL below. The recipe needs a periodic bump of that number.
-The `/s /e /f` extraction switch and the `/S /v/qn` silent-install switch on `InstallHPSA.exe` are
-**not** documented on HP's own SoftPaq page — which only says "double-click and follow the on-screen
-instructions" — but come from third-party enterprise-deployment write-ups and are corroborated by the
-extractor producing a folder literally named `HPSA9`, matching this recipe's own name. **Not verified
-by execution**, same constraint as every other recipe in this repository.
+
+HPSA 9 is a packaged app, not a classic installer: `InstallHPSA.exe` is a .NET launcher that calls
+`DISM /Online /Add-ProvisionedAppxPackage` on the `.appxbundle` shipped inside the SoftPaq, so the
+application only shows up at the next user logon. Its accepted switches, read from the binary itself,
+are `/s` `-s` (silent), `/h` `-h`, `/l` `-l` — all lowercase. The InstallShield-style `/S /v/qn` used
+until 2026-08-12 is **not** one of them: the recipe reported success while nothing was installed.
+The launcher also has preconditions of its own — HP hardware, no HPSA below 8.8 already installed, no
+Fusion service already running — and it exits quietly when they are not met, writing its reason to
+`%SystemDrive%\system.sav\logs\HPSA_Setup_*.txt` or, failing that, to
+`%SystemDrive%\Recovery\OEM\LOGS\SYSTEM.SAV\logs`. That is why the recipe no longer trusts the exit
+code and verifies the provisioned package instead, pointing at that log when the check fails.
 
 ### TeamViewerQS
 - **install** : downloads the current TeamViewer QuickSupport from the vendor to
