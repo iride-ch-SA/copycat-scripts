@@ -70,6 +70,7 @@ Every Cats.Recipe can be abbreviated in commands: ***cats update Cats.Scripts***
 - Cats.Utils
 - G360.Support
 - Google.GWSMO
+- HPSA9
 - Microsoft.Office
 - TeamViewerQS
 #### Shortcuts
@@ -85,8 +86,9 @@ Every Cats.Recipe can be abbreviated in commands: ***cats update Cats.Scripts***
 For packages coming from winget, the source is queried before proceeding: if the package is already
 present it is updated instead of reinstalled, and if the name matches more than one package the
 operation stops with an error. The recipes that download their own installer — Acronis.Agent,
-Google.GWSMO, G360.Support, TeamViewerQS — do not go through winget, except TeamViewerQS which falls
-back to it when the vendor download fails.
+Google.GWSMO, G360.Support, HPSA9, TeamViewerQS — do not go through winget, except TeamViewerQS which
+falls back to it when the vendor download fails. HPSA9 has no winget fallback: no manifest exists in
+`microsoft/winget-pkgs` for HP Support Assistant, only unfulfilled package requests.
 
 ### cats update [recipe|shortcut]
 #### Recipes
@@ -222,6 +224,19 @@ disks. `cats create HID` writes it to `C:\Admin\Others\HID.txt`.
 ### Acronis.Agent, Google.GWSMO, G360.Support
 They download their respective installer and run the installation. G360.Support also creates the "IT
 Support" shortcut on the desktop of all users.
+
+### HPSA9
+- **install** : downloads HP Support Assistant 9 to `C:\Admin\Drivers\HP\HPSA9.exe`, silently
+  self-extracts it to `C:\Admin\Drivers\HP\HPSA9\`, then runs the extracted `InstallHPSA.exe /S /v/qn`
+
+The download URL is pinned to a HP SoftPaq number (`sp163238`, version 9.47.41.0, effective
+2025-09-16), not to a stable vendor path: HP retires and supersedes SoftPaq numbers as new versions
+ship, unlike TeamViewer's evergreen URL below. The recipe needs a periodic bump of that number.
+The `/s /e /f` extraction switch and the `/S /v/qn` silent-install switch on `InstallHPSA.exe` are
+**not** documented on HP's own SoftPaq page — which only says "double-click and follow the on-screen
+instructions" — but come from third-party enterprise-deployment write-ups and are corroborated by the
+extractor producing a folder literally named `HPSA9`, matching this recipe's own name. **Not verified
+by execution**, same constraint as every other recipe in this repository.
 
 ### TeamViewerQS
 - **install** : downloads the current TeamViewer QuickSupport from the vendor to
