@@ -32,6 +32,13 @@ if not "%~1"=="remove" IF NOT EXIST "C:\Admin\Scripts\config\%username%.bgi" IF 
 )
 
 
+IF NOT EXIST "C:\Admin\Apps\Bginfo.exe" (
+	echo [36mBgInfo not found in C:\Admin\Apps, installing it[0m
+	if exist C:\Admin\Scripts\cats-recipes\BgInfo.bat (
+		call C:\Admin\Scripts\cats-recipes\BgInfo.bat install
+	)
+)
+
 IF EXIST "C:\Admin\Scripts\config\%username%.bgi" (
 	echo [36mUsing a profile specific for user %username% found in C:\Admin\Scripts\config\%username%.bgi[0m
 	C:\Admin\Apps\Bginfo.exe C:\Admin\Scripts\config\%username%.bgi /timer:0 /silent /accepteula

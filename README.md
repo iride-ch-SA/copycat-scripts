@@ -281,7 +281,7 @@ They are called directly from `C:\Admin\Scripts`.
 | `rm-winget-source.bat` | Removes the Microsoft.Winget.Source package, per user and from provisioning: **required before sysprep**, which would otherwise fail. Do not reboot between this script and sysprep |
 | `rename-pc.bat` | Assigns a random `PC-XXXXXXXXX` name and reboots |
 | `set-path.bat` | Adds `C:\Admin\Scripts` to the system PATH. Legacy form, superseded by `cats prepare Scripts` |
-| `set-background.bat` | Applies the BgInfo wallpaper. With `get [name]` it downloads the image first, with `remove` it deletes it. When the machine defines no background at all — no `.bgi` profile and no `background.jpg` — it downloads the `Trust` image and applies it; the solid colour stays as the fallback if the download fails |
+| `set-background.bat` | Applies the BgInfo wallpaper, installing BgInfo first via the `BgInfo` recipe if `C:\Admin\Apps\Bginfo.exe` is missing. With `get [name]` it downloads the image first, with `remove` it deletes it. When the machine defines no background at all — no `.bgi` profile and no `background.jpg` — it downloads the `Trust` image and applies it; the solid colour stays as the fallback if the download fails |
 | `set-registry.bat` | Registry settings by scope: `news-and-interests`, `aad-users`, `local-user`, `wireguard-nonadmin-users` |
 | `set-permissions.bat` | Permissions on installed files. Today the `bginfo` and `teamviewerqs` scopes |
 | `reset-power-settings.bat` | Disables sleep, hibernation and screen turn-off on AC power |
