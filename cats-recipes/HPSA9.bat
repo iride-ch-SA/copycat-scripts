@@ -1,25 +1,37 @@
 @echo off
 setlocal enabledelayedexpansion
 
+rem HP publishes HP Support Assistant as a single SoftPaq for every supported Windows:
+rem the package covers Windows 10 32/64 bit and Windows 11 23H2, 24H2 and 25H2, and the
+rem installer picks the architecture from the .appxbundle it carries. There is no per
+rem Windows version download, so the only thing to keep current is the SoftPaq number.
+rem HP retires a SoftPaq number when a newer version supersedes it: check
+rem https://support.hp.com/us-en/help/hp-support-assistant and update HPSA_SP below.
+rem HPSA_SP 173774 is HP Support Assistant 9.54.3.0, effective July 07 2026.
+set HPSA_SP=173774
+set /a HPSA_BLOCK_START=(%HPSA_SP% - 1) / 500 * 500 + 1
+set /a HPSA_BLOCK_END=%HPSA_BLOCK_START% + 499
+set HPSA_URL=https://ftp.hp.com/pub/softpaq/sp%HPSA_BLOCK_START%-%HPSA_BLOCK_END%/sp%HPSA_SP%.exe
+
 if "%~1"=="install" (
 	if not exist "C:\Admin\Drivers\HP" ( mkdir C:\Admin\Drivers\HP )
 
-	if not exist "C:\Admin\Drivers\HP\HPSA9.exe" (
-		echo [36mRECIPE    : Downloading HP Support Assistant [0m
-		powershell -command "(new-object System.Net.WebClient).DownloadFile('https://ftp.hp.com/pub/softpaq/sp163001-163500/sp163238.exe','C:\Admin\Drivers\HP\HPSA9.exe')"
+	if not exist "C:\Admin\Drivers\HP\HPSA9-sp%HPSA_SP%.exe" (
+		echo [36mRECIPE    : Downloading HP Support Assistant, SoftPaq sp%HPSA_SP% [0m
+		powershell -command "(new-object System.Net.WebClient).DownloadFile('%HPSA_URL%','C:\Admin\Drivers\HP\HPSA9-sp%HPSA_SP%.exe')"
 	)
 
-	if not exist "C:\Admin\Drivers\HP\HPSA9.exe" (
+	if not exist "C:\Admin\Drivers\HP\HPSA9-sp%HPSA_SP%.exe" (
 		echo [31mERROR     : HP Support Assistant installer could not be downloaded [0m
 		exit /b 2
 	)
 
-	if not exist "C:\Admin\Drivers\HP\HPSA9\Setup.exe" (
+	if not exist "C:\Admin\Drivers\HP\HPSA9-sp%HPSA_SP%\Setup.exe" (
 		echo [36mRECIPE    : Extracting HP Support Assistant [0m
-		"C:\Admin\Drivers\HP\HPSA9.exe" /s /e /f "C:\Admin\Drivers\HP\HPSA9"
+		"C:\Admin\Drivers\HP\HPSA9-sp%HPSA_SP%.exe" /s /e /f "C:\Admin\Drivers\HP\HPSA9-sp%HPSA_SP%"
 	)
 
-	if not exist "C:\Admin\Drivers\HP\HPSA9\Setup.exe" (
+	if not exist "C:\Admin\Drivers\HP\HPSA9-sp%HPSA_SP%\Setup.exe" (
 		echo [31mERROR     : Extraction failed, HP Support Assistant was not installed [0m
 		exit /b 2
 	)
@@ -31,7 +43,7 @@ if "%~1"=="install" (
 	)
 
 	echo [36mRECIPE    : Starting the HP Support Assistant setup, follow the wizard on screen [0m
-	"C:\Admin\Drivers\HP\HPSA9\Setup.exe"
+	"C:\Admin\Drivers\HP\HPSA9-sp%HPSA_SP%\Setup.exe"
 	set hpsaExit=!ERRORLEVEL!
 
 	powershell -noprofile -executionpolicy bypass -command "$p = @(Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -like 'AD2F1837.HPSupportAssistant*' }); $u = @(Get-AppxPackage -AllUsers -Name 'AD2F1837.HPSupportAssistant'); if ($p.Count + $u.Count -gt 0) { exit 0 } else { exit 1 }"
