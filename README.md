@@ -226,22 +226,35 @@ They download their respective installer and run the installation. G360.Support 
 Support" shortcut on the desktop of all users.
 
 ### HPSA9
-- **install** : downloads HP Support Assistant 9 to `C:\Admin\Drivers\HP\HPSA9.exe`, silently
-  self-extracts it to `C:\Admin\Drivers\HP\HPSA9\` if not already extracted, then runs the extracted
-  `Setup.exe` **interactively** — the operator answers the wizard on screen —, and once it returns
-  checks that the package really got provisioned
+- **install** : downloads the HP Support Assistant 9 SoftPaq to `C:\Admin\Drivers\HP\sp<number>.exe`
+  if it is not there yet, then runs that file **as HP ships it** — no switch, no extraction step, the
+  operator answers the wizard on screen —, and once it returns checks that the package really got
+  provisioned
 
-The download URL is pinned to a HP SoftPaq number (`sp163238`, version 9.47.41.0, effective
-2025-09-16), not to a stable vendor path: HP retires and supersedes SoftPaq numbers as new versions
-ship, unlike TeamViewer's evergreen URL below. The recipe needs a periodic bump of that number.
+The file keeps the name it has on `ftp.hp.com` and is run in one step. Extracting it with `/s /e /f`
+and then running the extracted `Setup.exe` — what the recipe did until 2026-08-13 — makes the setup
+refuse the machine with *"this version of HP Support Assistant seems to be incompatible with the
+operating system in use"*, reproduced on a deployed machine. Neither the rename nor the two-step run
+is safe to reintroduce.
+
+The download URL is pinned to a HP SoftPaq number (`sp173774`, version 9.54.3.0, effective
+2026-07-07), not to a stable vendor path: HP retires and supersedes SoftPaq numbers as new versions
+ship, unlike TeamViewer's evergreen URL below. The number lives in a single place, `set HPSA_SP` at the
+top of the recipe, and both the ftp directory block and the URL are computed from it; the recipe needs a
+periodic bump of that number, read from
+<https://support.hp.com/us-en/help/hp-support-assistant>. There is no queryable channel that gives the
+current one: `ftp.hp.com` exposes no directory listing and the HP Image Assistant reference files do not
+carry HPSA.
 
 HPSA 9 is a packaged app, not a classic installer: `InstallHPSA.exe` is a .NET launcher that calls
 `DISM /Online /Add-ProvisionedAppxPackage` on the `.appxbundle` shipped inside the SoftPaq, so the
 application only shows up at the next user logon. `Setup.exe` is the thin wrapper HP ships next to it:
 it checks the signature of `InstallHPSA.exe`, checks .NET 4.5 through `NetFramework45Installed.ps1`,
-looks for `-s` or `/s` on its own command line and then starts the launcher. **The recipe deliberately
-passes no switch**: unattended installation is not wanted here, the wrapper opens its interface and the
-operator answers it. Silent mode was tried until 2026-08-12 and abandoned.
+looks for `-s` or `/s` on its own command line and then starts the launcher. Both are inside the SoftPaq
+and the recipe no longer calls either of them directly: it runs the SoftPaq, which unpacks itself and
+chains them the way HP intends. **No switch is passed anywhere**: unattended installation is not wanted
+here, HP's interface opens and the operator answers it. Silent mode was tried until 2026-08-12 and
+abandoned.
 
 The launcher has preconditions of its own and refuses the install when they are not met, with a negative
 exit code: `-5` the two HP Fusion services `HPSysInfoCap` and `HPAppHelperCap` are missing or stopped,
@@ -249,7 +262,8 @@ exit code: `-5` the two HP Fusion services `HPSysInfoCap` and `HPAppHelperCap` a
 build or architecture. HPSA 9 does **not** install those services, it requires them: HP factory images
 carry them, a machine imaged from a template does not. The recipe therefore warns when `HPSysInfoCap` is
 absent — without stopping, the decision is the operator's — and after the wizard it verifies the
-provisioned package rather than trusting an exit code, translating the negative codes and pointing at
+provisioned package rather than trusting an exit code. The code it reports back is the SoftPaq wrapper's,
+so a negative launcher code shows up only if the wrapper forwards it; the log to read either way is
 `system.sav\logs\HPSASetUpCpp.txt` on the system drive, which `Setup.exe` writes.
 
 ### TeamViewerQS

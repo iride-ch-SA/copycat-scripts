@@ -12,27 +12,24 @@ set HPSA_SP=173774
 set /a HPSA_BLOCK_START=(%HPSA_SP% - 1) / 500 * 500 + 1
 set /a HPSA_BLOCK_END=%HPSA_BLOCK_START% + 499
 set HPSA_URL=https://ftp.hp.com/pub/softpaq/sp%HPSA_BLOCK_START%-%HPSA_BLOCK_END%/sp%HPSA_SP%.exe
+set HPSA_EXE=C:\Admin\Drivers\HP\sp%HPSA_SP%.exe
+
+rem The SoftPaq is run the way HP ships it: same file name as on ftp.hp.com, no switch and
+rem no extraction step. Extracting it with /s /e /f and then running the extracted Setup.exe
+rem made the setup refuse the machine with "this version of HP Support Assistant seems to be
+rem incompatible with the operating system in use" - field test of 2026-08-13. Do not rename
+rem the file and do not split the run in two steps.
 
 if "%~1"=="install" (
 	if not exist "C:\Admin\Drivers\HP" ( mkdir C:\Admin\Drivers\HP )
 
-	if not exist "C:\Admin\Drivers\HP\HPSA9-sp%HPSA_SP%.exe" (
+	if not exist "%HPSA_EXE%" (
 		echo [36mRECIPE    : Downloading HP Support Assistant, SoftPaq sp%HPSA_SP% [0m
-		powershell -command "(new-object System.Net.WebClient).DownloadFile('%HPSA_URL%','C:\Admin\Drivers\HP\HPSA9-sp%HPSA_SP%.exe')"
+		powershell -command "(new-object System.Net.WebClient).DownloadFile('%HPSA_URL%','%HPSA_EXE%')"
 	)
 
-	if not exist "C:\Admin\Drivers\HP\HPSA9-sp%HPSA_SP%.exe" (
+	if not exist "%HPSA_EXE%" (
 		echo [31mERROR     : HP Support Assistant installer could not be downloaded [0m
-		exit /b 2
-	)
-
-	if not exist "C:\Admin\Drivers\HP\HPSA9-sp%HPSA_SP%\Setup.exe" (
-		echo [36mRECIPE    : Extracting HP Support Assistant [0m
-		"C:\Admin\Drivers\HP\HPSA9-sp%HPSA_SP%.exe" /s /e /f "C:\Admin\Drivers\HP\HPSA9-sp%HPSA_SP%"
-	)
-
-	if not exist "C:\Admin\Drivers\HP\HPSA9-sp%HPSA_SP%\Setup.exe" (
-		echo [31mERROR     : Extraction failed, HP Support Assistant was not installed [0m
 		exit /b 2
 	)
 
@@ -42,13 +39,15 @@ if "%~1"=="install" (
 		echo [33mWARNING   : the HP Fusion service HPSysInfoCap is missing, the setup may refuse to install [0m
 	)
 
-	echo [36mRECIPE    : Starting the HP Support Assistant setup, follow the wizard on screen [0m
-	"C:\Admin\Drivers\HP\HPSA9-sp%HPSA_SP%\Setup.exe"
+	echo [36mRECIPE    : Starting the HP Support Assistant SoftPaq, follow the wizard on screen [0m
+	"%HPSA_EXE%"
 	set hpsaExit=!ERRORLEVEL!
 
 	powershell -noprofile -executionpolicy bypass -command "$p = @(Get-AppxProvisionedPackage -Online | Where-Object { $_.DisplayName -like 'AD2F1837.HPSupportAssistant*' }); $u = @(Get-AppxPackage -AllUsers -Name 'AD2F1837.HPSupportAssistant'); if ($p.Count + $u.Count -gt 0) { exit 0 } else { exit 1 }"
 	if errorlevel 1 (
-		echo [31mERROR     : HP Support Assistant is not installed, Setup.exe returned !hpsaExit! [0m
+		echo [31mERROR     : HP Support Assistant is not installed, the SoftPaq returned !hpsaExit! [0m
+		echo [31mERROR     : if the HP setup is still on screen, finish it and run this recipe again [0m
+		rem the exit code is the SoftPaq wrapper's: it shows a negative launcher code only if it forwards it
 		if "!hpsaExit!"=="-5" echo [31mERROR     : -5 means the HP Fusion services are missing or not running [0m
 		if "!hpsaExit!"=="-6" echo [31mERROR     : -6 means an HPSA older than 8.8 is installed and cannot be upgraded [0m
 		if "!hpsaExit!"=="-8" echo [31mERROR     : -8 means this Windows build or architecture is not supported [0m
