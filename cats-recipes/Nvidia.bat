@@ -146,11 +146,17 @@ if "%~1"=="install" (
 
 	set "NV_APPCHECK=$k = @(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*','HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -like 'NVIDIA App*' }); if ($k.Count -gt 0 -or (Test-Path ($env:ProgramFiles + '\NVIDIA Corporation\NVIDIA app\CEF\NVIDIA app.exe'))) { exit 0 } else { exit 1 }"
 
-	powershell -noprofile -executionpolicy bypass -command "!NV_APPCHECK!"
-	if not errorlevel 1 (
-		powershell -noprofile -command "Write-Host 'RECIPE    : NVIDIA App is already installed, nothing to do' -ForegroundColor Cyan"
-		exit /b 0
-	)
+	rem The first check names what it found, the one after the install only decides. A bare "already
+	rem installed" is not evidence: on the run of 2026-08-20 it appeared on a machine that had come out
+	rem of the previous run *without* the App, and nothing in the output said whether an App had really
+	rem been installed in between or whether this test answers yes to something the driver leaves
+	rem behind. Printing the uninstall entry with its version, or the path that matched, settles that
+	rem question the next time instead of raising it again.
+
+	set "NV_APPFOUND=$k = @(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*','HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -like 'NVIDIA App*' }); $p = $env:ProgramFiles + '\NVIDIA Corporation\NVIDIA app\CEF\NVIDIA app.exe'; if ($k.Count -gt 0) { $n = $k[0].DisplayName; $v = $k[0].DisplayVersion; if (-not $v) { $v = 'version not declared' }; Write-Host ('RECIPE    : NVIDIA App is already installed, nothing to do: ' + $n + ' ' + $v) -ForegroundColor Cyan; exit 0 } elseif (Test-Path $p) { Write-Host ('RECIPE    : NVIDIA App is already installed, nothing to do: no uninstall entry, found ' + $p) -ForegroundColor Cyan; exit 0 } else { exit 1 }"
+
+	powershell -noprofile -executionpolicy bypass -command "!NV_APPFOUND!"
+	if not errorlevel 1 ( exit /b 0 )
 
 	set NV_APPERR=
 	set NV_APPVER=
