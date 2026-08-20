@@ -106,11 +106,19 @@ if "%~1"=="install" (
 	rem The installer returns as soon as its own interface is done, and a driver change may
 	rem need a restart before Windows reports it: what follows is information for whoever is
 	rem at the screen, not a verdict on the installation.
-	echo [36mRECIPE    : Driver version now reported by Windows: [0m
-	powershell -noprofile -command "Get-CimInstance Win32_VideoController | Where-Object { $_.Name -match 'NVIDIA' } | ForEach-Object { '  ' + $_.Name + ' - ' + $_.DriverVersion }"
+	rem
+	rem These two lines are coloured by PowerShell and not by an escape sequence, on purpose. A
+	rem graphical installer is free to leave the console's virtual-terminal mode off when it
+	rem returns, and the NVIDIA one does: on the run of 2026-08-20 the escape sequences of the
+	rem line below reached the screen as text, while every line printed before the installer -
+	rem and every line printed after the powershell call below, which turns that mode back on -
+	rem came out coloured. Write-Host paints through the console API, which does not depend on
+	rem the mode, so it is right either way. Every recipe that prints after an attended
+	rem installer has the same exposure.
+	powershell -noprofile -command "Write-Host 'RECIPE    : Driver version now reported by Windows:' -ForegroundColor Cyan; Get-CimInstance Win32_VideoController | Where-Object { $_.Name -match 'NVIDIA' } | ForEach-Object { '  ' + $_.Name + ' - ' + $_.DriverVersion }"
 
 	if not "!nvExit!"=="0" (
-		echo [33mWARNING   : the NVIDIA installer returned !nvExit!, check the result on screen [0m
+		powershell -noprofile -command "Write-Host 'WARNING   : the NVIDIA installer returned !nvExit!, check the result on screen' -ForegroundColor Yellow"
 	)
 
 	exit /b 0
