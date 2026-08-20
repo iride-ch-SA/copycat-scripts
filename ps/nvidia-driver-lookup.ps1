@@ -164,7 +164,7 @@ foreach ($entry in @($answer.IDS)) {
 	$candidates += $info
 }
 if ($candidates.Count -eq 0) {
-	Write-Fail "the NVIDIA lookup service returned no full package for series $Psid: this GPU may be served by a legacy branch only"
+	Write-Fail "the NVIDIA lookup service returned no full package for series ${Psid}: this GPU may be served by a legacy branch only"
 }
 
 # The service answers newest first, but the order is its choice and not a contract: sort by
