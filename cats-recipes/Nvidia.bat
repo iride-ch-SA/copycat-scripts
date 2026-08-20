@@ -1,7 +1,13 @@
 @echo off
 setlocal enabledelayedexpansion
 
-rem NVIDIA display driver, full package: NVIDIA App and NVIDIA Control Panel included.
+rem NVIDIA display driver, full package, plus NVIDIA App.
+rem
+rem The driver package carries the display driver and NVIDIA Control Panel, and it does *not*
+rem carry NVIDIA App: field report of 2026-08-20, a Wild Cat installed from the
+rem quadro-rtx-desktop-notebook package came out without it. The App is a separate NVIDIA
+rem download, so the recipe fetches and installs it as a second step - see the end of the
+rem install branch and ps\nvidia-app-lookup.ps1.
 rem
 rem The recipe downloads, it does not install: the wizard is driven by our operator, the same
 rem attended arrangement chosen for HPSA9. Nothing is passed to the installer, so it opens
@@ -99,7 +105,7 @@ if "%~1"=="install" (
 	)
 
 	echo [36mRECIPE    : Starting the NVIDIA installer, follow the wizard on screen [0m
-	echo [36mRECIPE    : keep NVIDIA App and NVIDIA Control Panel selected, they are the full package [0m
+	echo [36mRECIPE    : keep NVIDIA Control Panel selected, it comes with the driver [0m
 	"!NV_EXE!"
 	set nvExit=!ERRORLEVEL!
 
@@ -121,6 +127,84 @@ if "%~1"=="install" (
 		powershell -noprofile -command "Write-Host 'WARNING   : the NVIDIA installer returned !nvExit!, check the result on screen' -ForegroundColor Yellow"
 	)
 
+	rem ---- NVIDIA App ----------------------------------------------------------------------
+	rem
+	rem NVIDIA App is on the Microsoft Store (product XP8CLZL93F5Z4P), but that listing is not an
+	rem MSIX: it carries no package family name and its installer type is WPM, a pointer to the
+	rem same Win32 setup NVIDIA publishes itself. There is therefore nothing to provision the way
+	rem HPSA9 is provisioned, and no per-user variant to avoid: the setup is NVI2, the same
+	rem installer framework as the driver, and NVI2 installs per machine - Program Files, HKLM,
+	rem services - so the App is there for every user of the machine by construction. That is the
+	rem "for all users" the principal asked for on 2026-08-20.
+	rem
+	rem This step is silent, unlike the driver above: the driver wizard is attended because the
+	rem operator chooses what the driver installs, while the App has nothing to choose. NVI2 takes
+	rem -s and -noreboot. To make it attended instead, drop both switches.
+	rem
+	rem The exit code is not trusted, HPSA9 precedent: what decides is whether the App is
+	rem afterwards present in the machine.
+
+	set "NV_APPCHECK=$k = @(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*','HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -like 'NVIDIA App*' }); if ($k.Count -gt 0 -or (Test-Path ($env:ProgramFiles + '\NVIDIA Corporation\NVIDIA app\CEF\NVIDIA app.exe'))) { exit 0 } else { exit 1 }"
+
+	powershell -noprofile -executionpolicy bypass -command "!NV_APPCHECK!"
+	if not errorlevel 1 (
+		powershell -noprofile -command "Write-Host 'RECIPE    : NVIDIA App is already installed, nothing to do' -ForegroundColor Cyan"
+		exit /b 0
+	)
+
+	set NV_APPERR=
+	set NV_APPVER=
+	set NV_APPFILE=
+	set NV_APPURL=
+	set "NV_APPLOG=%NV_DIR%\nvapp-lookup.log"
+
+	powershell -noprofile -command "Write-Host 'RECIPE    : Looking up the current NVIDIA App installer' -ForegroundColor Cyan"
+	powershell -noprofile -executionpolicy bypass -command C:\Admin\Scripts\ps\nvidia-app-lookup.ps1 > "!NV_APPLOG!" 2>&1
+
+	for /f "usebackq tokens=1,* delims==" %%k in ("!NV_APPLOG!") do (
+		if "%%k"=="ERROR" ( set "NV_APPERR=%%l" )
+		if "%%k"=="APPVERSION" ( set "NV_APPVER=%%l" )
+		if "%%k"=="APPFILE" ( set "NV_APPFILE=%%l" )
+		if "%%k"=="APPURL" ( set "NV_APPURL=%%l" )
+	)
+
+	if not "!NV_APPERR!"=="" (
+		powershell -noprofile -command "Write-Host 'ERROR     : !NV_APPERR!' -ForegroundColor Red"
+		powershell -noprofile -command "Write-Host 'ERROR     : the driver is installed, NVIDIA App is not. Full output in !NV_APPLOG!' -ForegroundColor Red"
+		exit /b 2
+	)
+
+	if "!NV_APPURL!"=="" (
+		powershell -noprofile -command "Write-Host 'ERROR     : the NVIDIA App lookup returned no installer. What it did say:' -ForegroundColor Red"
+		type "!NV_APPLOG!"
+		exit /b 2
+	)
+
+	set "NV_APPEXE=%NV_DIR%\!NV_APPFILE!"
+
+	if not exist "!NV_APPEXE!" (
+		powershell -noprofile -command "Write-Host 'RECIPE    : Downloading NVIDIA App !NV_APPVER! to %NV_DIR%' -ForegroundColor Cyan"
+		powershell -noprofile -command "(new-object System.Net.WebClient).DownloadFile('!NV_APPURL!','!NV_APPEXE!')"
+	)
+
+	if not exist "!NV_APPEXE!" (
+		powershell -noprofile -command "Write-Host 'ERROR     : NVIDIA App could not be downloaded from !NV_APPURL!' -ForegroundColor Red"
+		exit /b 2
+	)
+
+	powershell -noprofile -command "Write-Host 'RECIPE    : Installing NVIDIA App !NV_APPVER! for all users, this takes a few minutes' -ForegroundColor Cyan"
+	"!NV_APPEXE!" -s -noreboot
+	set nvAppExit=!ERRORLEVEL!
+
+	powershell -noprofile -executionpolicy bypass -command "!NV_APPCHECK!"
+	if errorlevel 1 (
+		powershell -noprofile -command "Write-Host 'ERROR     : NVIDIA App is not installed, its setup returned !nvAppExit!' -ForegroundColor Red"
+		powershell -noprofile -command "Write-Host 'ERROR     : NVI2 refuses to install while a reboot is pending: restart, then run this recipe again' -ForegroundColor Red"
+		powershell -noprofile -command "Write-Host 'ERROR     : or run !NV_APPEXE! by hand and follow the wizard' -ForegroundColor Red"
+		exit /b 2
+	)
+
+	powershell -noprofile -command "Write-Host 'RECIPE    : NVIDIA App !NV_APPVER! installed for all users' -ForegroundColor Cyan"
 	exit /b 0
 )
 
