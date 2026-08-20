@@ -46,8 +46,19 @@ if "%~1"=="install" (
 	set NV_FILE=
 	set NV_URL=
 
+	rem The lookup writes to a file, stderr folded in, and the file is what gets parsed. Reading
+	rem the pipe directly - as the first version did - throws stderr away, so a PowerShell that
+	rem fails before its first line of output leaves nothing behind and the recipe can only say
+	rem that no package came back. That is exactly what the first run on a Wild Cat produced,
+	rem 2026-08-20, and the cause was unrecoverable afterwards. The file stays on disk on
+	rem purpose: it is the evidence for whoever looks at the failure. -command, not -file,
+	rem because that is the form already in exercise in HID.bat and User.bat.
+	set "NV_LOG=%NV_DIR%\lookup.log"
+
 	echo [36mRECIPE    : Detecting the NVIDIA GPU and looking up its current driver [0m
-	for /f "tokens=1,* delims==" %%k in ('powershell -noprofile -executionpolicy bypass -file C:\Admin\Scripts\ps\nvidia-driver-lookup.ps1 !NV_ARGS!') do (
+	powershell -noprofile -executionpolicy bypass -command C:\Admin\Scripts\ps\nvidia-driver-lookup.ps1 !NV_ARGS! > "!NV_LOG!" 2>&1
+
+	for /f "usebackq tokens=1,* delims==" %%k in ("!NV_LOG!") do (
 		if "%%k"=="ERROR" ( set "NV_ERR=%%l" )
 		if "%%k"=="GPU" ( set "NV_GPU=%%l" )
 		if "%%k"=="SERIES" ( set "NV_SERIES=%%l" )
@@ -57,17 +68,21 @@ if "%~1"=="install" (
 		if "%%k"=="URL" ( set "NV_URL=%%l" )
 	)
 
+	if not "!NV_GPU!"=="" ( echo [36mRECIPE    : !NV_GPU! [0m )
+
 	if not "!NV_ERR!"=="" (
 		echo [31mERROR     : !NV_ERR! [0m
+		echo [31mERROR     : full lookup output in !NV_LOG! [0m
 		exit /b 2
 	)
 
 	if "!NV_URL!"=="" (
-		echo [31mERROR     : the NVIDIA driver lookup returned no package, check the network and try again [0m
+		echo [31mERROR     : the NVIDIA driver lookup returned no package. What it did say: [0m
+		type "!NV_LOG!"
+		echo [31mERROR     : send the lines above, they name the cause [0m
 		exit /b 2
 	)
 
-	echo [36mRECIPE    : !NV_GPU! [0m
 	echo [36mRECIPE    : !NV_SERIES! driver !NV_VER!, !NV_SIZE! [0m
 
 	set "NV_EXE=%NV_DIR%\!NV_FILE!"

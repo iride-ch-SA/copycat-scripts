@@ -29,6 +29,17 @@ param (
 # whose adapter Windows cannot name yet, which is exactly the machine that needs a driver.
 
 $ErrorActionPreference = "Stop"
+
+# Every failure has to leave the machine on stdout, because the batch caller reads stdout and
+# nothing else: an error written to stderr reaches nobody and the recipe can then only say
+# that no package came back, which is what happened on the first run on a Wild Cat,
+# 2026-08-20. With ErrorActionPreference Stop any unforeseen error is terminating, so the
+# trap is what turns it into a line the caller can print.
+trap {
+	Write-Output "ERROR=$($_.Exception.Message) [line $($_.InvocationInfo.ScriptLineNumber)]"
+	exit 1
+}
+
 try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 } catch { }
 
 # The series table. Order matters: a professional board is matched before the GeForce pattern
@@ -137,6 +148,7 @@ Write-Output "OSID=$osid"
 $lookup = "https://gfwsl.geforce.com/services_toolkit/services/com/nvidia/services/AjaxDriverService.php" +
 	"?func=DriverManualLookup&psid=$Psid&pfid=$pfid&osID=$osid&languageCode=1033&beta=null&isWHQL=1" +
 	"&dltype=-1&dch=1&upCRD=null&qnf=0&sort1=0&numberOfResults=10"
+Write-Output "LOOKUP=$lookup"
 try {
 	$answer = (Invoke-WebRequest -UseBasicParsing -TimeoutSec 60 $lookup).Content | ConvertFrom-Json
 } catch {
