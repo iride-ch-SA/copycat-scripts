@@ -19,7 +19,6 @@ for %%a in (%*) do (
 			if /I "%%a"=="intelDASA" ( call C:\Admin\Scripts\cats-install-winget.bat Intel.IntelDriverAndSupportAssistant & set isShortCut=1 )
 			if /I "%%a"=="gDrive" ( call C:\Admin\Scripts\cats-install-winget.bat Google.GoogleDrive & set isShortCut=1 )
 			if /I "%%a"=="qGIS" ( call C:\Admin\Scripts\cats-install-winget.bat OSGeo.QGIS_LTR & set isShortCut=1 )
-			if /I "%%a"=="WireGuard" ( call C:\Admin\Scripts\cats-install-winget.bat WireGuard.WireGuard & set isShortCut=1 )
 			if /I "%%a"=="WindowsApp" ( call C:\Admin\Scripts\cats-install-winget.bat Microsoft.WindowsApp & set isShortCut=1 )
 			if /I "%%a"=="GWSMO" ( 
 				if exist "C:\Admin\Scripts\cats-recipes\Google.GWSMO.bat" ( 

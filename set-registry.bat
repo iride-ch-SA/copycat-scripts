@@ -56,6 +56,6 @@ IF /I "%PARAM1%"=="wireguard-nonadmin-users" (
 		reg add "HKLM\SOFTWARE\WireGuard" /t REG_DWORD /v LimitedOperatorUI /d "1" /f
 	)
 	IF /I "%PARAM2%"=="disable" (
-		reg del "HKLM\SOFTWARE\WireGuard" /v LimitedOperatorUI /f
+		reg delete "HKLM\SOFTWARE\WireGuard" /v LimitedOperatorUI /f
 	)
 )

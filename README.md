@@ -44,7 +44,7 @@ in the dispatcher but are **not implemented**.
 |---|---|---|
 | [`install`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-install) | Installs a recipe, a shortcut, or any winget package name | `cats install Cats.Base`, `cats install TeamViewerQS`, `cats install 7zip.7zip` |
 | [`update`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-update) | Updates the scripts, Office, winget packages and Windows | `cats update Scripts`, `cats update Windows` |
-| [`prepare`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-prepare) | Prepares folders, PATH, utilities, users, deployment | `cats prepare AdminFolders`, `cats prepare deploy-azure` |
+| [`prepare`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-prepare) | Prepares folders, PATH, utilities, users, deployment | `cats prepare AdminFolders`, `cats prepare WireGuard users`, `cats prepare deploy-azure` |
 | [`create`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-create) | Creates local users and the hardware identifier | `cats create Admin mario`, `cats create HID` |
 | [`clean`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-clean) | Disk cleanup, sfc, DISM, network reset, password reset | `cats clean disks`, `cats clean itadmin` |
 
@@ -55,13 +55,13 @@ Passwords are never typed on the command line: `cats create`, `cats clean User` 
 
 `Acronis.Agent`, `Adobe.Acrobat.Reader`, `BgInfo`, `Cats.AdminFolders`, `Cats.Base`, `Cats.Scripts`,
 `Cats.Utils`, `G360.Support`, `Google.GWSMO`, `HID`, `HPSA9`, `LibreOffice`, `Microsoft.Office`,
-`Nvidia`, `TeamViewerQS`, `User`. One page each in the
+`Nvidia`, `TeamViewerQS`, `User`, `WireGuard`. One page each in the
 [Recipes](https://github.com/iride-ch-SA/copycat-scripts/wiki/Recipes) index.
 
 ### Scripts outside cats
 
 `sysprep.bat`, `rm-winget-source.bat`, `rename-pc.bat`, `set-background.bat`, `set-registry.bat`,
-`set-permissions.bat`, `reset-power-settings.bat`, `permit-wireguard-to-user.bat`, `hasher.bat`,
+`set-permissions.bat`, `reset-power-settings.bat`, `hasher.bat`,
 `do-updates.bat`, `userlogin.bat`, `deploy-userlogin.bat` and a few more are called directly from
 `C:\Admin\Scripts`. `cmda.bat` opens a cmd prompt as Administrator.
 
