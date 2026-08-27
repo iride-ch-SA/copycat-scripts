@@ -19,9 +19,14 @@ for /f "tokens=* delims=(=" %%s in ('!_wsearch! ^|find /I /c " %~1 "') do (
 	) else (
 		if %%s GTR 1 (
 			echo [31mERROR     : Winget has more than one package for %~1. [0m
+			echo [36mWINGET    : This is what winget knows about %~1 [0m
+			winget search %~1 --accept-source-agreements
+			echo [36mWINGET    : Call cats install again with one exact Id from the Id column [0m
 			exit /b 2
 		) else (
 			echo [31mERROR     : Package %~1 cannot be found in winget. [0m
+			echo [36mWINGET    : This is what winget knows about %~1 [0m
+			winget search %~1 --accept-source-agreements
 			exit /b 2
 		)
 	)
