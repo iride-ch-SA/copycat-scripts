@@ -10,6 +10,7 @@ if /I "%~1"=="prepare" (
 	if "%~2"=="" (
 		echo [31mERROR     : You must specify a username, or users to scan the whole machine [0m
 		echo [94mUSAGE     : cats prepare WireGuard username, or cats prepare WireGuard users [0m
+		echo [94mUSAGE     : an Entra account is named as AzureAD\user@tenant, a domain one as DOMAIN\user [0m
 		exit /b 2
 	)
 
