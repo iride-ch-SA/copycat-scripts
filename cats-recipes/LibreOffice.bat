@@ -18,6 +18,14 @@ rem macOS, where a langpack is a separate file. ps\libreoffice-lookup.ps1 works 
 rem UI_LANGS must take from the culture Windows reports, and also resolves the current version
 rem and its URL: TDF publishes no evergreen URL, every release sits under its own version path.
 rem
+rem Where the bytes come from. Not from download.documentfoundation.org, or at least not from it
+rem alone: the redirector killed the connection on the first field run of this recipe, 2026-08-27,
+rem and had refused the agent's machine the same day while four direct TDF mirrors answered. The
+rem download therefore goes through ps\tdf-fetch.ps1, which tries the redirector first and then
+rem those mirrors, and verifies the Authenticode signature of what arrives before this recipe
+rem installs it - the packages are signed by The Document Foundation, so the bytes are checked
+rem whichever mirror served them.
+rem
 rem   cats install LibreOffice
 rem
 rem Two options, for the operator who needs them. They are not meant for the cats command line -
@@ -51,6 +59,7 @@ if "%~1"=="install" (
 	set LO_UILANGS=
 	set LO_FILE=
 	set LO_URL=
+	set LO_RELPATH=
 	set LO_HELPFILE=
 	set LO_HELPURL=
 	set LO_OSUI=
@@ -75,6 +84,7 @@ if "%~1"=="install" (
 		if "%%k"=="UILANGS" ( set "LO_UILANGS=%%l" )
 		if "%%k"=="FILE" ( set "LO_FILE=%%l" )
 		if "%%k"=="URL" ( set "LO_URL=%%l" )
+		if "%%k"=="RELPATH" ( set "LO_RELPATH=%%l" )
 		if "%%k"=="HELPFILE" ( set "LO_HELPFILE=%%l" )
 		if "%%k"=="HELPURL" ( set "LO_HELPURL=%%l" )
 		if "%%k"=="OSUICULTURE" ( set "LO_OSUI=%%l" )
@@ -121,16 +131,29 @@ if "%~1"=="install" (
 	)
 
 	set "LO_MSI=%LO_DIR%\!LO_FILE!"
+	set "LO_FETCHLOG=%LO_DIR%\fetch.log"
 
-	if not exist "!LO_MSI!" (
-		echo [36mRECIPE    : Downloading !LO_FILE! to %LO_DIR%, around 375 MB [0m
-		powershell -noprofile -command "(new-object System.Net.WebClient).DownloadFile('!LO_URL!','!LO_MSI!')"
+	rem No `if not exist` around this call: whether the package is already on disk is decided by
+	rem the fetch script, which verifies the copy it finds instead of trusting its name. A part
+	rem file left by an interrupted run is resumed there, and a truncated one is thrown away -
+	rem handing a half written 375 MB MSI to msiexec would report the installer as the fault.
+	echo [36mRECIPE    : Downloading !LO_FILE! to %LO_DIR%, around 375 MB [0m
+	powershell -noprofile -executionpolicy bypass -command C:\Admin\Scripts\ps\tdf-fetch.ps1 -Path "!LO_RELPATH!" -File "!LO_FILE!" -Out "!LO_MSI!" > "!LO_FETCHLOG!" 2>&1
+
+	set LO_SOURCE=
+	for /f "usebackq tokens=1,* delims==" %%k in ("!LO_FETCHLOG!") do (
+		if "%%k"=="SOURCE" ( set "LO_SOURCE=%%l" )
 	)
 
 	if not exist "!LO_MSI!" (
-		echo [31mERROR     : the LibreOffice package could not be downloaded [0m
-		echo [31mERROR     : !LO_URL! [0m
+		echo [31mERROR     : the LibreOffice package could not be downloaded. Every source: [0m
+		type "!LO_FETCHLOG!"
+		echo [31mERROR     : the official address is !LO_URL! [0m
 		exit /b 2
+	)
+
+	if not "!LO_SOURCE!"=="" (
+		echo [36mRECIPE    : downloaded from !LO_SOURCE!, signature verified [0m
 	)
 
 	rem start /wait, not a bare msiexec: msiexec hands the work to the Windows Installer service
@@ -156,20 +179,34 @@ if "%~1"=="install" (
 	rem The help pack is optional and never fatal: LibreOffice falls back to the online help, and
 	rem not every one of the 126 UI languages has one. It is a separate MSI because help, unlike
 	rem the interface, is not bundled in the Windows installer.
-	if not "!LO_HELPURL!"=="" (
+	rem
+	rem -Optional is what separates «no such help pack» from «the download failed»: a 404 on every
+	rem mirror is MISSING, anything else is a failure worth naming. Nothing probes for it first -
+	rem the lookup used to, with a HEAD on the redirector, and that HEAD answered «absent» for
+	rem every language on a fleet the redirector will not talk to.
+	if not "!LO_HELPFILE!"=="" (
 		set "LO_HELPMSI=%LO_DIR%\!LO_HELPFILE!"
-		if not exist "!LO_HELPMSI!" (
-			echo [36mRECIPE    : Downloading the !LO_LANG! help pack [0m
-			powershell -noprofile -command "(new-object System.Net.WebClient).DownloadFile('!LO_HELPURL!','!LO_HELPMSI!')"
+		set "LO_HELPLOG=%LO_DIR%\fetch-helppack.log"
+
+		echo [36mRECIPE    : Looking for the !LO_LANG! offline help pack [0m
+		powershell -noprofile -executionpolicy bypass -command C:\Admin\Scripts\ps\tdf-fetch.ps1 -Path "!LO_RELPATH!" -File "!LO_HELPFILE!" -Out "!LO_HELPMSI!" -Optional > "!LO_HELPLOG!" 2>&1
+
+		set LO_HELPMISS=
+		for /f "usebackq tokens=1,* delims==" %%k in ("!LO_HELPLOG!") do (
+			if "%%k"=="MISSING" ( set "LO_HELPMISS=1" )
 		)
+
 		if exist "!LO_HELPMSI!" (
 			echo [36mRECIPE    : Installing the !LO_LANG! offline help [0m
 			start /wait "" msiexec /i "!LO_HELPMSI!" /qn /norestart
 		) else (
-			echo [33mWARNING   : the !LO_LANG! help pack could not be downloaded, the online help stays [0m
+			if "!LO_HELPMISS!"=="1" (
+				echo [36mRECIPE    : no offline help pack published for !LO_LANG!, the online help stays [0m
+			) else (
+				echo [33mWARNING   : the !LO_LANG! help pack could not be downloaded, the online help stays [0m
+				echo [33mWARNING   : what each source answered is in !LO_HELPLOG! [0m
+			)
 		)
-	) else (
-		echo [36mRECIPE    : no offline help pack for !LO_LANG!, the online help stays [0m
 	)
 
 	exit /b 0

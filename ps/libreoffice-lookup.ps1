@@ -82,8 +82,11 @@ try {
 		}
 	}
 	if (-not $Arch) {
-		throw ('this Windows reports PROCESSOR_ARCHITECTURE={0}, and The Document Foundation ' +
-			'publishes no Windows build for it: install by hand' -f $env:PROCESSOR_ARCHITECTURE)
+		# The concatenation is parenthesised on purpose: -f binds tighter than +, so without it
+		# the format is applied to the second fragment alone and the message reaches the operator
+		# with a literal {0} in it. Three messages in this script shipped that way on 2026-08-27.
+		throw (('this Windows reports PROCESSOR_ARCHITECTURE={0}, and The Document Foundation ' +
+			'publishes no Windows build for it: install by hand') -f $env:PROCESSOR_ARCHITECTURE)
 	}
 	# The file name says x86-64 where the path says x86_64. Not a typo, TDF's own naming.
 	$token = if ($Arch -eq 'x86_64') { 'x86-64' } else { 'aarch64' }
@@ -129,41 +132,47 @@ try {
 	$pattern = '<option value="{0}"[^>]*data-version-dir="([^"]+)"[^>]*data-version-file="([^"]+)"' -f $Branch
 	$m = [regex]::Match($html, $pattern)
 	if (-not $m.Success) {
-		throw ("the download page no longer carries a '{0}' version option: TDF changed the " +
-			'page and ps\libreoffice-lookup.ps1 has to be updated' -f $Branch)
+		throw (("the download page no longer carries a '{0}' version option: TDF changed the " +
+			'page and ps\libreoffice-lookup.ps1 has to be updated') -f $Branch)
 	}
 	$dir = $m.Groups[1].Value
 	$file = $m.Groups[2].Value
 	Emit 'VERSION' $file
 
 	$msi = 'LibreOffice_{0}_Win_{1}.msi' -f $file, $token
-	$base = 'https://download.documentfoundation.org/libreoffice/stable/{0}/win/{1}' -f $dir, $Arch
+	$rel = 'stable/{0}/win/{1}' -f $dir, $Arch
+	$base = 'https://download.documentfoundation.org/libreoffice/{0}' -f $rel
 	$url = '{0}/{1}' -f $base, $msi
 	if ($html.IndexOf($url, [StringComparison]::OrdinalIgnoreCase) -lt 0) {
-		throw ('the download page does not publish {0}: it names a version this build of the ' +
-			'page has no Windows package for' -f $url)
+		throw (('the download page does not publish {0}: it names a version this build of the ' +
+			'page has no Windows package for') -f $url)
 	}
 	Emit 'FILE' $msi
 	Emit 'URL' $url
+	# The release path on its own, because the recipe no longer downloads from the URL above:
+	# download.documentfoundation.org killed the connection on the first field run, 2026-08-27,
+	# and ps\tdf-fetch.ps1 walks a list of mirrors of which the redirector is only the first.
+	# The URL is still emitted, and still required to appear in the page, because that is what
+	# proves the version and the architecture are published - and it is the address a human
+	# should be given when the download fails.
+	Emit 'RELPATH' $rel
 
 	# ---- help pack --------------------------------------------------------------------------
 	#
-	# Optional, and deliberately not fatal. Local help in the machine's language is worth the
-	# few megabytes, but LibreOffice falls back to the online help when it is absent, and not
-	# every one of the 126 UI languages has a help pack. The HEAD settles it: the redirector
-	# answers 200 only if some mirror carries the file. If HEAD is refused - a mirror is free to
-	# do that - the help pack is skipped, never guessed.
+	# Optional, and deliberately not fatal. Local help in the machine's language is worth the few
+	# megabytes, but LibreOffice falls back to the online help when it is absent, and not every
+	# one of the 126 UI languages has one.
+	#
+	# Its name is emitted without being probed. Until 2026-08-27 a HEAD on the redirector decided
+	# whether to emit it at all, which was wrong twice over: the redirector is the one TDF host
+	# that will not answer this fleet, so the probe reported «no help pack» for every language
+	# including the ones that have one - and the probe asked one host a question that the download
+	# then asks five. ps\tdf-fetch.ps1 is called with -Optional instead, and a 404 from every
+	# mirror is what now means the help pack does not exist. One mechanism, and the answer comes
+	# from whoever is actually going to serve the file.
 	$helpFile = 'LibreOffice_{0}_Win_{1}_helppack_{2}.msi' -f $file, $token, $lo
-	$helpUrl = '{0}/{1}' -f $base, $helpFile
-	try {
-		$head = Invoke-WebRequest -Uri $helpUrl -Method Head -UseBasicParsing -TimeoutSec 30
-		if ($head.StatusCode -eq 200) {
-			Emit 'HELPFILE' $helpFile
-			Emit 'HELPURL' $helpUrl
-		}
-	} catch {
-		Emit 'HELPNOTE' ('no help pack for {0}, the online help stays' -f $lo)
-	}
+	Emit 'HELPFILE' $helpFile
+	Emit 'HELPURL' ('{0}/{1}' -f $base, $helpFile)
 } catch {
 	Emit 'ERROR' $_.Exception.Message
 }
