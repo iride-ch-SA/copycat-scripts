@@ -165,7 +165,11 @@ if "%~1"=="install" (
 
 	rem HPSA9 precedent: the exit code is not what decides, the state of the machine is. 3010 is
 	rem a success that asks for a restart, and /norestart is why it can appear at all.
-	set "LO_CHECK=$k = @(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*','HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue); $k = @($k.Where({ $_.DisplayName -like 'LibreOffice*' -and $_.DisplayName -notlike '*Help Pack*' })); if ($k.Count -gt 0) { Write-Host ('RECIPE    : ' + $k[0].DisplayName + ' ' + $k[0].DisplayVersion + ' is installed') -ForegroundColor Cyan; exit 0 } else { exit 1 }"
+	rem
+	rem The version is appended to the display name only when the name does not already carry it:
+	rem LibreOffice registers as «LibreOffice 26.8.0.3» with the same string as DisplayVersion, so
+	rem printing both said «LibreOffice 26.8.0.3 26.8.0.3». Other products do not repeat it.
+	set "LO_CHECK=$k = @(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*','HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue); $k = @($k.Where({ $_.DisplayName -like 'LibreOffice*' -and $_.DisplayName -notlike '*Help Pack*' })); if ($k.Count -gt 0) { $n = $k[0].DisplayName; $v = $k[0].DisplayVersion; if ($v -and $n -notlike ('*' + $v + '*')) { $n = $n + ' ' + $v }; Write-Host ('RECIPE    : ' + $n + ' is installed') -ForegroundColor Cyan; exit 0 } else { exit 1 }"
 
 	powershell -noprofile -executionpolicy bypass -command "!LO_CHECK!"
 	if errorlevel 1 (
