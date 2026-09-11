@@ -15,6 +15,12 @@ param(
 #    -mode ask    : the password is typed, never echoed
 #    -create      : the account is created instead of updated
 #  The account is always left enabled and with no expiration.
+#  New-LocalUser puts the account in no group at all - net user
+#  /add would have added it to Users - so group membership is the
+#  caller's business: cats-recipes\User.bat asks for Users on every
+#  path through ps\set-localgroup-member.ps1. Without a membership
+#  in Users or Administrators the account is not listed on the
+#  sign-in screen and netplwiz does not show it as a user.
 #  Nothing is written to disk: no log, no file, no clipboard.
 #  With -mode random the script refuses to run when PowerShell
 #  transcription is enabled by policy, because everything shown

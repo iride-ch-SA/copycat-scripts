@@ -42,17 +42,40 @@ if /I "%~1"=="create" (
 		)
 	)
 
+	rem Every account has to be a member of Users: that is the group the
+	rem sign-in screen and netplwiz enumerate, and New-LocalUser - unlike
+	rem net user /add - leaves the new account in no group at all. An
+	rem account created with ask or random was therefore reachable over
+	rem RDP and not listed at the console. The membership is asked for on
+	rem every path, literal password included: the helper reads the group
+	rem back, and an account that is already a member is a success.
+	rem The name travels in the environment: it is quoted once, by nobody,
+	rem and a quote or a space in it cannot reach the PowerShell parser.
+	rem A helper called with -command hands back 1 for any failure it
+	rem meets, whatever code it exited with, so the code is re-raised.
+	set "CATS_MEMBER=%~2"
+	echo [36mRECIPE    : Adding user to the Users group [0m
+	powershell -noprofile -executionpolicy bypass -command "& C:\Admin\Scripts\ps\set-localgroup-member.ps1 -username $env:CATS_MEMBER -sid S-1-5-32-545; exit $LASTEXITCODE"
+	if errorlevel 2 exit /b 2
+
+	rem The built-in groups are named by SID and never by name: on a
+	rem localised Windows they are translated - Operatori di
+	rem configurazione di rete was measured on an Italian machine - so
+	rem the hardcoded net localgroup administrators used here before
+	rem fails wherever that group is not called that
 	if /I "%~4"=="Administrators" (
-		echo [36mRECIPE    : Adding user to Administrators group [0m
-		cmd /c net localgroup administrators "%~2" /add
+		echo [36mRECIPE    : Adding user to the Administrators group [0m
+		powershell -noprofile -executionpolicy bypass -command "& C:\Admin\Scripts\ps\set-localgroup-member.ps1 -username $env:CATS_MEMBER -sid S-1-5-32-544; exit $LASTEXITCODE"
+		if errorlevel 2 exit /b 2
 		if /I "%~5"=="hide" (
 			echo [36mRECIPE    : Hiding user from login screen [0m
 			call "%~f0" prepare "%~2" hide
 		)
 	) else (
 		if /I not "%~4"=="no-rdp" (
-			echo [36mRECIPE    : Adding non-administrative user to Remote Desktop User group [0m
-			powershell -noprofile -executionpolicy bypass -command C:\Admin\Scripts\ps\set-rdpuser.ps1 "%~2"
+			echo [36mRECIPE    : Adding non-administrative user to the Remote Desktop Users group [0m
+			powershell -noprofile -executionpolicy bypass -command "& C:\Admin\Scripts\ps\set-localgroup-member.ps1 -username $env:CATS_MEMBER -sid S-1-5-32-555; exit $LASTEXITCODE"
+			if errorlevel 2 exit /b 2
 		)
 	)
 	exit /b 0
