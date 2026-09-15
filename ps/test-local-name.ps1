@@ -7,7 +7,11 @@ param(
 #  Says whether a name is one a LOCAL account can be created
 #  under, and nothing else: it is the guard cats create User
 #  asks for before any of its three paths runs.
-#    -username <name> : the name as it was typed
+#    -username <name> : the name as it was typed, judged as it
+#                       was typed: a name with a space at either
+#                       end is refused, not trimmed, because the
+#                       caller creates the account under the
+#                       string it was handed
 #  Exit codes: 0 the name is that of a local account, 2 it is
 #  not, and the reason is on standard error. Nothing is written
 #  to standard output either way: callers capture that stream.

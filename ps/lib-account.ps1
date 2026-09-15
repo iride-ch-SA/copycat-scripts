@@ -69,7 +69,17 @@ function Test-LocalAccountName {
 		return 'no name was given'
 	}
 
-	$name = $name.Trim()
+	# The name is judged exactly as it was given, never trimmed first: the
+	# callers create the account, set its password and write its registry
+	# value under the string THEY were handed, so a guard that passed
+	# judgement on a different string would be the same "one name is
+	# checked and another is used" this file exists to remove. A name with
+	# a blank at either end is therefore refused here, where the reason can
+	# be named, instead of reaching New-LocalUser and coming back as a
+	# message of its own.
+	if ($name -ne $name.Trim()) {
+		return "'" + $name + "' begins or ends with a space or a tab, and the name is used here exactly as it was typed"
+	}
 
 	if ($name -match '@') {
 		return "'" + $name + "' is a user principal name, so it names an Entra account and not a local one"

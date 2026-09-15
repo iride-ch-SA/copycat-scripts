@@ -130,6 +130,11 @@ if (-not $username) {
 	exit 2
 }
 
+# Trimmed before anything else, and deliberately before the guard too: what
+# this script hands back is the name MEASURED on the machine, not the one
+# typed, so the string judged here and the string used here are the same one.
+# Test-LocalAccountName refuses a name with a space at either end, because
+# its other callers do create an account under the string they were given.
 $name = $username.Trim()
 
 if ($local) {
