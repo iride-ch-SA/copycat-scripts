@@ -20,13 +20,19 @@ if /I "%~1"=="prepare" (
 exit /b 2
 
 rem ============================================================
-rem  deploy registers the sign-in task, and writes nothing under
-rem  C:\Admin\Scripts. That folder is the clone of the repository,
-rem  so a file laid there is a local change to a tracked file and
-rem  the next cats update Scripts stops pulling. The files this
-rem  recipe writes are the hooks in C:\Admin\Others, the ones
-rem  prepare writes: the shared userlogin.bat, or the one of the
-rem  user whose name is given. If the tracked userlogin.bat is
+rem  deploy registers the sign-in task, and that is all it does.
+rem  The task runs C:\Admin\Scripts\userlogin.bat at every logon,
+rem  for every user of the machine: that file ships with the
+rem  repository, applies the background through set-background.bat
+rem  and calls whatever it finds in C:\Admin\Others - the shared
+rem  userlogin.bat, and the <name>.bat of the user signing in.
+rem  Those files are written by prepare, never here: deploy is the
+rem  hook, prepare is what the hook calls, and the two verbs are
+rem  not interchangeable.
+rem  Nothing is ever written under C:\Admin\Scripts. That folder
+rem  is the clone of the repository, so a file laid there is a
+rem  local change to a tracked file and the next cats update
+rem  Scripts stops pulling. If the tracked userlogin.bat is
 rem  missing, the clone is incomplete: the way back is to restore
 rem  it, not to lay an inert copy of it over the clone.
 rem ============================================================
@@ -38,8 +44,10 @@ if not exist "%userlogin_script%" (
 	exit /b 2
 )
 
-call :prepare "%~1"
-if errorlevel 1 exit /b 2
+if not "%~1"=="" (
+	echo [33mWARNING   : deploy takes no user name, so %~1 was ignored and no file was written [0m
+	echo [94mUSAGE     : the sign-in scripts live in C:\Admin\Others and are written by cats prepare Userlogin %~1 [0m
+)
 
 echo [32mRECIPE    : Registering "%userlogin_task%" for every user of this machine [0m
 powershell -noprofile -executionpolicy bypass -command "C:\Admin\Scripts\ps\register-logon-task.ps1 -taskname '%userlogin_task%' -command '%userlogin_script%' -sid S-1-5-32-545"

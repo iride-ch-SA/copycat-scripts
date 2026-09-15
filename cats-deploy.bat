@@ -3,10 +3,11 @@ setlocal enabledelayedexpansion
 
 echo [95mSTARTING [96m : CopyCat Deploy[0m
 
-rem A recipe takes its own arguments, and the loop walks over those too:
-rem cats deploy Userlogin mario passes mario to the recipe and then looks
-rem for a recipe called mario. Only a parameter met before any recipe has
+rem A recipe can take its own arguments, and the loop walks over those
+rem too: whatever follows the recipe name is passed to it and then looked
+rem up as a recipe in its turn. Only a parameter met before any recipe has
 rem matched is a name of this verb, and only that one is worth a warning
+rem here - what comes after belongs to the recipe, which judges it itself
 set deploy_matched=0
 
 for %%a in (%*) do (
