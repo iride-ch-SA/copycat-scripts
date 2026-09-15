@@ -18,11 +18,20 @@ if /I "%~1"=="create" (
 		exit /b
 	)
 	if /I "%~3"=="no-rdp" (
-		call "%~f0" create "%~2" ask no-rdp
+		call "%~f0" create "%~2" ask no-rdp "%~4"
 		exit /b
 	)
 	if /I "%~3"=="hide" (
 		call "%~f0" create "%~2" ask "%~4" hide
+		exit /b
+	)
+	rem hide is an option of its own and can follow any form, so it is moved
+	rem to the slot the recipe reads it from - the fifth - whatever slot it
+	rem was typed in. Without this cats create User mario ask hide and
+	rem cats create User mario no-rdp hide left the keyword where nothing
+	rem looks for it, and the account was created and left visible
+	if /I "%~4"=="hide" (
+		call "%~f0" create "%~2" "%~3" "" hide
 		exit /b
 	)
 
@@ -83,15 +92,28 @@ if /I "%~1"=="create" (
 		echo [36mRECIPE    : Adding user to the Administrators group [0m
 		powershell -noprofile -executionpolicy bypass -command "& C:\Admin\Scripts\ps\set-localgroup-member.ps1 -username $env:CATS_MEMBER -sid S-1-5-32-544; exit $LASTEXITCODE"
 		if errorlevel 2 exit /b 2
-		if /I "%~5"=="hide" (
-			echo [36mRECIPE    : Hiding user from login screen [0m
-			call "%~f0" prepare "%~2" hide
-		)
 	) else (
 		if /I not "%~4"=="no-rdp" (
 			echo [36mRECIPE    : Adding non-administrative user to the Remote Desktop Users group [0m
 			powershell -noprofile -executionpolicy bypass -command "& C:\Admin\Scripts\ps\set-localgroup-member.ps1 -username $env:CATS_MEMBER -sid S-1-5-32-555; exit $LASTEXITCODE"
 			if errorlevel 2 exit /b 2
+		)
+	)
+
+	rem hide is applied here, after the groups and on every form. It used to
+	rem live inside the Administrators branch, so cats create User mario hide
+	rem - which normalises to create mario ask "" hide - took the else branch:
+	rem the account was created, added to Users and to Remote Desktop Users
+	rem and left on the sign-in screen, with no error to say so. Only
+	rem cats create User mario Administrators hide ever hid anyone.
+	rem A hide that fails is reported: the account exists either way, so the
+	rem operator has to know it is still listed.
+	if /I "%~5"=="hide" (
+		echo [36mRECIPE    : Hiding user from login screen [0m
+		call "%~f0" prepare "%~2" hide
+		if errorlevel 1 (
+			echo [33mWARNING   : the account was created but it is still on the sign-in screen [0m
+			exit /b 2
 		)
 	)
 	exit /b 0
