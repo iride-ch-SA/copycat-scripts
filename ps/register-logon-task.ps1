@@ -2,6 +2,7 @@ param(
 	[string]$taskname,
 	[string]$command,
 	[string]$sid = 'S-1-5-32-545',
+	[switch]$force,
 	[switch]$quiet
 )
 
@@ -14,6 +15,8 @@ param(
 #    -command <path>   : the batch file or executable it runs
 #    -sid <S-1-5-32-x> : the group the task runs for, always by
 #                        SID, S-1-5-32-545 (Users) by default
+#    -force            : register again a task that is already
+#                        there exactly as asked
 #    -quiet            : only problems are printed
 #  The principal is a group and not a user, because a logon task
 #  registered the plain way runs for the account that created it
@@ -31,7 +34,17 @@ param(
 #  translated on a localised Windows: Users is "Utenti".
 #  The task runs unelevated, with the rights of whoever signs in,
 #  but registering a task for a group needs an elevated prompt.
-#  Exit codes: 0 registered and verified, 2 for any error.
+#  A task that is already registered for the same group and runs
+#  the same command is NOT registered again: it is reported and
+#  left alone, because rewriting it would say nothing and would
+#  hide the fact that the machine was already deployed. One that
+#  exists and does not match is rewritten, after saying what it
+#  was - that is the task a half finished fallback leaves behind.
+#  Exit codes: 0 registered and verified, 3 already registered as
+#  asked and left untouched, 2 for any error. A code above 1 only
+#  reaches a .bat caller if powershell is invoked as
+#  -command "& <script> <args>; exit $LASTEXITCODE": without that
+#  tail every non zero code arrives as 1.
 # ============================================================
 
 function Write-Recipe {
@@ -219,33 +232,58 @@ function Register-WithSchtasks {
 	return $true
 }
 
-function Get-TaskPrincipalSid {
-	# Registering is not the same as being registered the way it was asked:
-	# whichever way was taken, the task is read back and its principal
-	# returned as a SID, with either tool this machine happens to have
+function Format-Command {
+	# The path a task runs comes back quoted from one tool and bare from the
+	# other, so both are brought to the same shape before being compared
+	param([string]$text)
+
+	if (-not $text) { return '' }
+	return $text.Trim().Trim('"').Trim()
+}
+
+function Get-RegisteredTask {
+	# Read the task back, with either tool this machine happens to have, and
+	# say who it runs for - as a SID - and what it runs. Asked twice: once
+	# before registering, because a task already there is not to be written
+	# over in silence, and once after, because registering is not the same
+	# as being registered the way it was asked. $null means it is not there
 	param([string]$name)
 
+	$principal = $null
+	$run = $null
+
 	if (Get-Command Get-ScheduledTask -ErrorAction SilentlyContinue) {
-		$task = Get-ScheduledTask -TaskName $name -ErrorAction SilentlyContinue
+		# The name can exist in more than one folder of the scheduler, and a
+		# Principal read off an array is an error, not a principal
+		$task = @(Get-ScheduledTask -TaskName $name -ErrorAction SilentlyContinue)[0]
 		if (-not $task) { return $null }
 		$principal = $task.Principal.GroupId
 		if (-not $principal) { $principal = $task.Principal.UserId }
-		return (Resolve-Sid $principal)
+		$action = @($task.Actions)[0]
+		if ($action) { $run = $action.Execute }
+	} else {
+		$text = Export-TaskXml $name
+		if (-not $text) { return $null }
+
+		$block = [regex]::Match($text, '(?s)<Principal\b[^>]*>.*?</Principal>')
+		if ($block.Success) {
+			$group = [regex]::Match($block.Value, '(?s)<GroupId>(.*?)</GroupId>')
+			$user = [regex]::Match($block.Value, '(?s)<UserId>(.*?)</UserId>')
+			if ($group.Success) {
+				$principal = $group.Groups[1].Value.Trim()
+			} elseif ($user.Success) {
+				$principal = $user.Groups[1].Value.Trim()
+			}
+		}
+
+		$exec = [regex]::Match($text, '(?s)<Exec\b[^>]*>.*?<Command>(.*?)</Command>')
+		if ($exec.Success) { $run = $exec.Groups[1].Value }
 	}
 
-	$text = Export-TaskXml $name
-	if (-not $text) { return $null }
-
-	$block = [regex]::Match($text, '(?s)<Principal\b[^>]*>.*?</Principal>')
-	if (-not $block.Success) { return $null }
-
-	$group = [regex]::Match($block.Value, '(?s)<GroupId>(.*?)</GroupId>')
-	if ($group.Success) { return (Resolve-Sid $group.Groups[1].Value.Trim()) }
-
-	$user = [regex]::Match($block.Value, '(?s)<UserId>(.*?)</UserId>')
-	if ($user.Success) { return (Resolve-Sid $user.Groups[1].Value.Trim()) }
-
-	return $null
+	$state = New-Object PSObject
+	$state | Add-Member NoteProperty Sid (Resolve-Sid $principal)
+	$state | Add-Member NoteProperty Command (Format-Command $run)
+	return $state
 }
 
 if (-not $taskname) {
@@ -276,6 +314,32 @@ Try {
 	exit 2
 }
 
+# What is already on this machine is read before anything is written: a
+# deploy run twice has to say so, not lay the same task over itself and
+# report it as new. A task that does not match is another matter - that
+# is what a fallback that failed halfway leaves behind - and it is said
+# out loud and then rewritten
+$existing = Get-RegisteredTask $taskname
+if ($existing) {
+	$wanted = Format-Command $command
+	$same = ($existing.Sid -eq $sid) -and ($existing.Command -ieq $wanted)
+
+	if ($same -and -not $force) {
+		Write-Recipe ("'" + $taskname + "' is already registered for " + $account + " and runs " + $existing.Command + ": nothing was changed") "Green"
+		exit 3
+	}
+
+	if ($same) {
+		Write-Recipe ("'" + $taskname + "' is already registered as asked, and -force was given: registering it again") "Yellow"
+	} else {
+		$who = 'a principal that cannot be read'
+		if ($existing.Sid) { $who = Resolve-Name $existing.Sid }
+		$what = 'a command that cannot be read'
+		if ($existing.Command) { $what = $existing.Command }
+		Write-Problem "WARNING" ("'" + $taskname + "' is already on this machine, runs " + $what + " for " + $who + ", and does not match what was asked: it is registered again") "Yellow"
+	}
+}
+
 $registered = $false
 
 if (Get-Command Register-ScheduledTask -ErrorAction SilentlyContinue) {
@@ -294,7 +358,9 @@ if (-not $registered) {
 	exit 2
 }
 
-$read = Get-TaskPrincipalSid $taskname
+$state = Get-RegisteredTask $taskname
+$read = $null
+if ($state) { $read = $state.Sid }
 if (-not $read) {
 	Write-Problem "ERROR" ("the task '" + $taskname + "' was registered without error but cannot be read back, so nothing proves it exists") "Red"
 	exit 2

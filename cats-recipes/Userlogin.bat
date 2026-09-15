@@ -35,6 +35,13 @@ rem  local change to a tracked file and the next cats update
 rem  Scripts stops pulling. If the tracked userlogin.bat is
 rem  missing, the clone is incomplete: the way back is to restore
 rem  it, not to lay an inert copy of it over the clone.
+rem  Deploying a machine that is already deployed is not an error
+rem  and is not work: the task is read back before anything is
+rem  written, and if it is already registered for the group and
+rem  points at the same file it is reported and left alone. One
+rem  that exists and does not match - the single user task a
+rem  fallback that failed halfway leaves behind - is named on the
+rem  console and then rewritten.
 rem ============================================================
 
 :deploy
@@ -50,7 +57,17 @@ if not "%~1"=="" (
 )
 
 echo [32mRECIPE    : Registering "%userlogin_task%" for every user of this machine [0m
-powershell -noprofile -executionpolicy bypass -command "C:\Admin\Scripts\ps\register-logon-task.ps1 -taskname '%userlogin_task%' -command '%userlogin_script%' -sid S-1-5-32-545"
+rem The helper answers 3 when the task is already there exactly as asked, and
+rem that code only survives the call because of the exit $LASTEXITCODE tail:
+rem powershell -command hands back 1 for any non zero code without it, so the
+rem two outcomes would arrive as the same number. Tested from the highest
+rem code down, the way if errorlevel works
+powershell -noprofile -executionpolicy bypass -command "& C:\Admin\Scripts\ps\register-logon-task.ps1 -taskname '%userlogin_task%' -command '%userlogin_script%' -sid S-1-5-32-545; exit $LASTEXITCODE"
+if errorlevel 3 (
+	echo [33mWARNING   : "%userlogin_task%" was already registered for every user of this machine, and was left as it is [0m
+	echo [94mUSAGE     : there is nothing to deploy twice. Delete it with schtasks /delete /tn "%userlogin_task%" /f to register it from scratch [0m
+	exit /b 0
+)
 if errorlevel 1 (
 	echo [31mERROR     : "%userlogin_task%" is not registered for the Users group. Run this from an elevated prompt [0m
 	exit /b 2
