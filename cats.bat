@@ -4,7 +4,7 @@ echo [95mEXECUTING[96m : CopyCat Scripts[0m
 :: Check if there is a verb
 if "%~1"=="" (
 	echo [31mERROR     : You must specify a verb as first parameter [0m
-	echo [94mUSAGE     : cats install,uninstall,update,prepare,clean,set,create,backup parameters [0m
+	echo [94mUSAGE     : cats install,uninstall,update,prepare,clean,set,create,deploy,backup parameters [0m
 	exit /b 2
 ) else (
 	echo [36mCALLING   : cats %~1 %2 %3 %4 %5 %6 %7 %8 %9 [0m
@@ -47,6 +47,10 @@ if "%~1"=="set" (
 
 if "%~1"=="create" (
 	call C:\Admin\Scripts\cats-create.bat %2 %3 %4 %5 %6 %7 %8 %9
+)
+
+if "%~1"=="deploy" (
+	call C:\Admin\Scripts\cats-deploy.bat %2 %3 %4 %5 %6 %7 %8 %9
 )
 
 if "%~1"=="backup" (
