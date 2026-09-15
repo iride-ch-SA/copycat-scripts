@@ -6,18 +6,8 @@ set userlogin_script=C:\Admin\Scripts\userlogin.bat
 set userlogin_others=C:\Admin\Others
 
 if /I "%~1"=="deploy" (
-	if not exist "%userlogin_script%" (
-		echo [32mRECIPE    : Creating an empty %userlogin_script% [0m
-		> "%userlogin_script%" echo REM Userlogin Script
-	)
-
-	echo [32mRECIPE    : Registering "%userlogin_task%" for every user of this machine [0m
-	powershell -noprofile -executionpolicy bypass -command "C:\Admin\Scripts\ps\register-logon-task.ps1 -taskname '%userlogin_task%' -command '%userlogin_script%' -sid S-1-5-32-545"
-	if errorlevel 1 (
-		echo [31mERROR     : "%userlogin_task%" is not registered for the Users group. Run this from an elevated prompt [0m
-		exit /b 2
-	)
-
+	call :deploy "%~2"
+	if errorlevel 1 exit /b 2
 	exit /b 0
 )
 
@@ -28,6 +18,37 @@ if /I "%~1"=="prepare" (
 )
 
 exit /b 2
+
+rem ============================================================
+rem  deploy registers the sign-in task, and writes nothing under
+rem  C:\Admin\Scripts. That folder is the clone of the repository,
+rem  so a file laid there is a local change to a tracked file and
+rem  the next cats update Scripts stops pulling. The files this
+rem  recipe writes are the hooks in C:\Admin\Others, the ones
+rem  prepare writes: the shared userlogin.bat, or the one of the
+rem  user whose name is given. If the tracked userlogin.bat is
+rem  missing, the clone is incomplete: the way back is to restore
+rem  it, not to lay an inert copy of it over the clone.
+rem ============================================================
+
+:deploy
+if not exist "%userlogin_script%" (
+	echo [31mERROR     : %userlogin_script% is missing: it ships with the repository, so this clone is incomplete [0m
+	echo [94mUSAGE     : restore it with cats update Scripts reset, then run cats deploy Userlogin again [0m
+	exit /b 2
+)
+
+call :prepare "%~1"
+if errorlevel 1 exit /b 2
+
+echo [32mRECIPE    : Registering "%userlogin_task%" for every user of this machine [0m
+powershell -noprofile -executionpolicy bypass -command "C:\Admin\Scripts\ps\register-logon-task.ps1 -taskname '%userlogin_task%' -command '%userlogin_script%' -sid S-1-5-32-545"
+if errorlevel 1 (
+	echo [31mERROR     : "%userlogin_task%" is not registered for the Users group. Run this from an elevated prompt [0m
+	exit /b 2
+)
+
+exit /b 0
 
 rem ============================================================
 rem  prepare writes the files userlogin.bat calls at every sign
@@ -48,12 +69,12 @@ rem ============================================================
 
 :prepare
 if not exist "%userlogin_others%" (
-	echo [36mRECIPE    : Creating %userlogin_others% [0m
+	echo [36mRECIPE    : Creating %userlogin_others% [0m
 	mkdir "%userlogin_others%"
 )
 
 if "%~1"=="" (
-	echo [36mRECIPE    : Preparing the sign-in script shared by every user of this machine [0m
+	echo [36mRECIPE    : Preparing the sign-in script shared by every user of this machine [0m
 	call :write "%userlogin_others%\userlogin.bat" "REM Configure here commands runned for each user at logon"
 	if errorlevel 1 exit /b 2
 	exit /b 0
@@ -67,23 +88,23 @@ rem is tested - for /f keeps standard output and leaves standard error
 rem on the console, where the operator reads what the helper measured
 set "UL_ACCOUNT=%~1"
 set "UL_NAME="
-echo [36mRECIPE    : Looking for the name %UL_ACCOUNT% signs in under [0m
+echo [36mRECIPE    : Looking for the name %UL_ACCOUNT% signs in under [0m
 for /f "usebackq delims=" %%n in (`powershell -noprofile -executionpolicy bypass -command "& C:\Admin\Scripts\ps\resolve-logon-name.ps1 -username $env:UL_ACCOUNT; exit $LASTEXITCODE"`) do set "UL_NAME=%%n"
 
 if not defined UL_NAME (
-	echo [31mERROR     : no sign-in name could be worked out for %UL_ACCOUNT%, nothing was written [0m
-	echo [94mUSAGE     : cats prepare Userlogin username, an Entra account as user@tenant, a domain one as DOMAIN\user [0m
+	echo [31mERROR     : no sign-in name could be worked out for %UL_ACCOUNT%, nothing was written [0m
+	echo [94mUSAGE     : cats prepare Userlogin username, an Entra account as user@tenant, a domain one as DOMAIN\user [0m
 	exit /b 2
 )
 
-echo [36mRECIPE    : Preparing the sign-in script of %UL_ACCOUNT%, who signs in as %UL_NAME% [0m
+echo [36mRECIPE    : Preparing the sign-in script of %UL_ACCOUNT%, who signs in as %UL_NAME% [0m
 call :write "%userlogin_others%\%UL_NAME%.bat" "REM Configure here commands runned for %UL_NAME%"
 if errorlevel 1 exit /b 2
 exit /b 0
 
 :write
 if exist "%~1" (
-	echo [33mWARNING   : %~1 already exists and was left as it is [0m
+	echo [33mWARNING   : %~1 already exists and was left as it is [0m
 	exit /b 0
 )
 
@@ -93,9 +114,9 @@ rem The file is read back: a redirection that could not write says so on
 rem a line that scrolls past, and a sign-in script that is not there is
 rem a sign-in script nobody misses until it is needed
 if not exist "%~1" (
-	echo [31mERROR     : %~1 could not be created. Run this from an elevated prompt [0m
+	echo [31mERROR     : %~1 could not be created. Run this from an elevated prompt [0m
 	exit /b 2
 )
 
-echo [32mRECIPE    : %~1 is ready to be filled in [0m
+echo [32mRECIPE    : %~1 is ready to be filled in [0m
 exit /b 0
