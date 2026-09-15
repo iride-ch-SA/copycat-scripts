@@ -1,5 +1,6 @@
 param(
 	[string]$username,
+	[switch]$local,
 	[switch]$quiet
 )
 
@@ -38,9 +39,24 @@ param(
 #       in at least once;
 #    4. what was typed, less any DOMAIN\ prefix and any @tenant
 #       suffix. Derived, not measured: a WARNING is printed.
+#    -local           : the account has to be a local one, and
+#                       nothing is derived. It is the form the
+#                       callers that write something per local
+#                       account need - the value under Winlogon
+#                       SpecialAccounts UserList, which has no
+#                       effect on a domain or an Entra account -
+#                       and there an unresolved name is an error,
+#                       not a case for the last resort.
 #  Exit codes: 0 the name is on standard output, 2 for any error
 #  and then standard output is empty.
 # ============================================================
+
+# The cascade that turns a typed name into a SID is shared with the other
+# account scripts of this repository and lives in one file only: three
+# copies of it had already drifted apart. Resolve-Principal and
+# Test-LocalAccountName come from there.
+. (Join-Path $PSScriptRoot 'lib-account.ps1')
+
 
 $forbidden = '[\\/:\*\?"<>\|]'
 
@@ -52,36 +68,6 @@ function Write-Note {
 function Write-Problem {
 	param([string]$label, [string]$text)
 	[Console]::Error.WriteLine($label.PadRight(10) + ": " + $text)
-}
-
-function Resolve-Principal {
-	# LookupAccountName - the API behind NTAccount.Translate, behind net
-	# localgroup and behind the WinNT provider - is the only thing on the
-	# machine that turns AzureAD\user@tenant into a SID. The LocalAccounts
-	# module does not go through it: it reads the SAM database, where a
-	# cloud account is not present at all. Same cascade of forms as
-	# set-localgroup-member.ps1, and for the same reason
-	param([string]$name)
-
-	$forms = @($name)
-	if ($name -notmatch '\\' -and $name -match '@') {
-		# A bare UPN: the machine expects it prefixed
-		$forms += ('AzureAD\' + $name)
-	}
-	if ($name -match '^(?i)azuread\\(.+)$') {
-		# Hybrid case: the same UPN belongs to the on-premises domain
-		$forms += $Matches[1]
-	}
-
-	foreach ($form in $forms) {
-		Try {
-			$resolved = (New-Object System.Security.Principal.NTAccount($form)).Translate([System.Security.Principal.SecurityIdentifier])
-			return [pscustomobject]@{ Name = $form; Sid = $resolved.Value }
-		} Catch {
-			# Not a name this machine knows in that form, the next one is tried
-		}
-	}
-	return $null
 }
 
 function Get-VolatileName {
@@ -145,30 +131,49 @@ if (-not $username) {
 }
 
 $name = $username.Trim()
+
+if ($local) {
+	$why = Test-LocalAccountName $name
+	if ($why) {
+		Write-Problem "ERROR" ($why + ", and what is being asked for applies to local accounts only")
+		exit 2
+	}
+}
+
 $target = Resolve-Principal $name
+
+if ($local -and -not $target) {
+	Write-Problem "ERROR" ("'" + $name + "' is not an account this machine knows: nothing is guessed here, because a name that is wrong would be written down and take effect on nobody")
+	exit 2
+}
+
+if ($local -and -not (Get-LocalUser -SID $target.Sid.Value -ErrorAction SilentlyContinue)) {
+	Write-Problem "ERROR" ("'" + $name + "' resolves to " + $target.Sid.Value + ", which is not a local account of this machine, and what is being asked for applies to local accounts only")
+	exit 2
+}
 
 if ($target) {
 	if ($target.Name -ne $name) {
 		Write-Note ("'" + $name + "' resolved as " + $target.Name)
 	}
 
-	$measured = Get-VolatileName $target.Sid
+	$measured = Get-VolatileName $target.Sid.Value
 	if ($measured) {
 		Write-Note ($target.Name + " signs in as " + $measured + ", read from the session open right now")
 	}
 
 	if (-not $measured) {
-		$account = Get-AccountName $target.Sid
+		$account = Get-AccountName $target.Sid.Value
 		# An Entra account answers with its UPN here, and that is not the
 		# name it signs in under: the profile folder is asked instead
 		if ($account -and $account -notmatch '@') {
 			$measured = $account
-			Write-Note ($target.Name + " signs in as " + $measured + ", the account name of " + $target.Sid)
+			Write-Note ($target.Name + " signs in as " + $measured + ", the account name of " + $target.Sid.Value)
 		}
 	}
 
 	if (-not $measured) {
-		$folder = Get-ProfileName $target.Sid
+		$folder = Get-ProfileName $target.Sid.Value
 		if ($folder) {
 			$measured = $folder
 			Write-Note ($target.Name + " signs in as " + $measured + ", the name of its profile folder")
@@ -185,6 +190,11 @@ if ($target) {
 	}
 } else {
 	Write-Problem "WARNING" ("'" + $name + "' is not a name this machine can resolve to an account: it may not have signed in here yet, or the tenant may be out of reach")
+}
+
+if ($local) {
+	Write-Problem "ERROR" ("the name '" + $name + "' signs in under could not be read on this machine, and with -local it is not derived from what was typed")
+	exit 2
 }
 
 $typed = Get-TypedName $name

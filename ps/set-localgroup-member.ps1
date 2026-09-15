@@ -24,6 +24,13 @@ param(
 #  for a change.
 # ============================================================
 
+# The cascade that turns a typed name into a SID is shared with the other
+# account scripts of this repository and lives in one file only: three
+# copies of it had already drifted apart. Resolve-Principal and
+# Test-LocalAccountName come from there.
+. (Join-Path $PSScriptRoot 'lib-account.ps1')
+
+
 function Write-Recipe {
 	param([string]$text, [string]$colour = 'Cyan')
 	if (-not $quiet) { Write-Host ("RECIPE    : " + $text) -ForegroundColor $colour }
@@ -59,35 +66,6 @@ function Get-GroupMemberSid {
 		}
 		return $sids
 	}
-}
-
-function Resolve-Principal {
-	# LookupAccountName - the API behind NTAccount.Translate, behind net
-	# localgroup and behind the WinNT provider - is the only thing on the
-	# machine that turns AzureAD\user@tenant into a SID. The LocalAccounts
-	# module does not go through it: it reads the SAM database, where a
-	# cloud account is not present at all.
-	param([string]$name)
-
-	$forms = @($name)
-	if ($name -notmatch '\\' -and $name -match '@') {
-		# A bare UPN: the machine expects it prefixed
-		$forms += ('AzureAD\' + $name)
-	}
-	if ($name -match '^(?i)azuread\\(.+)$') {
-		# Hybrid case: the same UPN belongs to the on-premises domain
-		$forms += $Matches[1]
-	}
-
-	foreach ($form in $forms) {
-		Try {
-			$resolved = (New-Object System.Security.Principal.NTAccount($form)).Translate([System.Security.Principal.SecurityIdentifier])
-			return [pscustomobject]@{ Name = $form; Sid = $resolved }
-		} Catch {
-			# Not a name this machine knows in that form, the next one is tried
-		}
-	}
-	return $null
 }
 
 if (-not $username) {

@@ -21,6 +21,13 @@ param(
 #  Exit codes: 0 something was changed, 1 nothing to do, 2 error.
 # ============================================================
 
+# The cascade that turns a typed name into a SID is shared with the other
+# account scripts of this repository and lives in one file only: three
+# copies of it had already drifted apart. Resolve-Principal and
+# Test-LocalAccountName come from there.
+. (Join-Path $PSScriptRoot 'lib-account.ps1')
+
+
 $NETCFG_SID = 'S-1-5-32-556'
 $ADMINS_SID = 'S-1-5-32-544'
 
@@ -74,36 +81,6 @@ function Get-JoinState {
 	if ($status -match 'WorkplaceJoined\s*:\s*YES') { return 'registered' }
 	if ($status -match 'DomainJoined\s*:\s*YES') { return 'domain' }
 	return 'workgroup'
-}
-
-function Resolve-Principal {
-	# LookupAccountName - the API behind NTAccount.Translate, behind
-	# net localgroup and behind the WinNT provider - is the only thing
-	# on the machine that turns AzureAD\user@tenant into a SID: on an
-	# Entra joined device the Cloud AP plugin answers for the AzureAD
-	# domain. The LocalAccounts module does not go through it, it reads
-	# the SAM database, where a cloud account simply is not there.
-	param([string]$name)
-
-	$forms = @($name)
-	if ($name -notmatch '\\' -and $name -match '@') {
-		# A bare UPN: the machine expects it prefixed
-		$forms += ('AzureAD\' + $name)
-	}
-	if ($name -match '^(?i)azuread\\(.+)$') {
-		# Hybrid case: the same UPN belongs to the on-premises domain
-		$forms += $Matches[1]
-	}
-
-	foreach ($form in $forms) {
-		Try {
-			$sid = (New-Object System.Security.Principal.NTAccount($form)).Translate([System.Security.Principal.SecurityIdentifier])
-			return [pscustomobject]@{ Name = $form; Sid = $sid }
-		} Catch {
-			# Not a name this machine knows in that form, the next one is tried
-		}
-	}
-	return $null
 }
 
 function Add-Operator {

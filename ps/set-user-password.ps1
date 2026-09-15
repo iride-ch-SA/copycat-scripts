@@ -27,10 +27,29 @@ param(
 #  on screen is written to the transcript file. Use -force to
 #  run anyway. A transcript started by hand with Start-Transcript
 #  cannot be detected and is not covered by this check.
+#  What this script touches is a LOCAL account and nothing else:
+#  New-LocalUser would accept a name like gianni@tenant.ch - @ is
+#  not among the characters the SAM database forbids - and create
+#  a local homonym of a cloud account, quietly. Test-LocalAccountName
+#  is asked first, and a name that is not that of a local account
+#  is refused here, before anything is created or changed.
 # ============================================================
+
+# Test-LocalAccountName, shared with the other account scripts
+. (Join-Path $PSScriptRoot 'lib-account.ps1')
 
 if (-not $username) {
 	Write-Host "ERROR: Username expected as first parameter" -ForegroundColor Red
+	exit 1
+}
+
+$why = Test-LocalAccountName $username
+if ($why) {
+	Write-Host ("ERROR: " + $why) -ForegroundColor Red
+	Write-Host "       This script creates and changes local accounts only. A domain or an Entra" -ForegroundColor Yellow
+	Write-Host "       account has no local password, and creating one under its name would make a" -ForegroundColor Yellow
+	Write-Host "       local homonym of it. For those accounts the verbs are cats prepare Userlogin" -ForegroundColor Yellow
+	Write-Host "       and cats prepare WireGuard." -ForegroundColor Yellow
 	exit 1
 }
 

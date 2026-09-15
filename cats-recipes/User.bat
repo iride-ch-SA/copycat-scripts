@@ -26,6 +26,22 @@ if /I "%~1"=="create" (
 		exit /b
 	)
 
+	rem cats create User creates a LOCAL account, and only that: it does not
+	rem create an account in a domain nor in a tenant, so a name that does not
+	rem suit a local account is refused here, before any of the three paths
+	rem runs. Without this guard New-LocalUser took an UPN as it came - @ is
+	rem not among the characters the SAM database forbids - and a local
+	rem homonym of the cloud account was created, then duly added to Users
+	rem and to Remote Desktop Users, with no error anywhere.
+	rem The name travels in the environment: it is quoted once, by nobody,
+	rem and a quote or a space in it cannot reach the PowerShell parser.
+	set "CATS_MEMBER=%~2"
+	powershell -noprofile -executionpolicy bypass -command "& C:\Admin\Scripts\ps\test-local-name.ps1 -username $env:CATS_MEMBER; exit $LASTEXITCODE"
+	if errorlevel 1 (
+		echo [94mUSAGE     : cats create User creates a local account. An account that lives in a domain or in a tenant is not created here: use cats prepare Userlogin and cats prepare WireGuard on the account as it is [0m
+		exit /b 2
+	)
+
 	if /I "%~3"=="ask" (
 		echo [36mRECIPE    : Create the user, the password is typed without being shown [0m
 		powershell -noprofile -executionpolicy bypass -command C:\Admin\Scripts\ps\set-user-password.ps1 "%~2" ask -create
@@ -53,7 +69,7 @@ if /I "%~1"=="create" (
 	rem and a quote or a space in it cannot reach the PowerShell parser.
 	rem A helper called with -command hands back 1 for any failure it
 	rem meets, whatever code it exited with, so the code is re-raised.
-	set "CATS_MEMBER=%~2"
+	rem CATS_MEMBER already holds the name, set before the guard above.
 	echo [36mRECIPE    : Adding user to the Users group [0m
 	powershell -noprofile -executionpolicy bypass -command "& C:\Admin\Scripts\ps\set-localgroup-member.ps1 -username $env:CATS_MEMBER -sid S-1-5-32-545; exit $LASTEXITCODE"
 	if errorlevel 2 exit /b 2
@@ -118,12 +134,14 @@ if /I "%~1"=="prepare" (
 	)
 
 	if /I "%~3"=="show" (
-		reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts\UserList" /v "%~2" /f
+		call :visibility "%~2" show
+		if errorlevel 1 exit /b 2
 		exit /b 0
 	)
 
 	if /I "%~3"=="hide" (
-		reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts\UserList" /t REG_DWORD /f /d 0 /v "%~2"
+		call :visibility "%~2" hide
+		if errorlevel 1 exit /b 2
 		exit /b 0
 	)
 
@@ -132,3 +150,43 @@ if /I "%~1"=="prepare" (
 )
 
 exit /b 2
+
+rem ============================================================
+rem  hide and show write, and remove, the value an account has
+rem  under Winlogon SpecialAccounts UserList, which is what keeps
+rem  it off the sign-in screen.
+rem  The NAME of that value is not the name that gets typed: it
+rem  has to be the one the account signs in under, the same rule
+rem  that governs C:\Admin\Others\<name>.bat. Getting it wrong
+rem  gives no error at all - reg add writes a value under any
+rem  name and returns 0 - so the recipe used to report success
+rem  while the account stayed visible.
+rem  That key lists LOCAL accounts, so ps\resolve-logon-name.ps1
+rem  is asked with -local: it measures the name on the machine and
+rem  refuses a domain or an Entra account outright, instead of
+rem  deriving a plausible name and writing it down for nobody.
+rem  for /f keeps standard output and leaves standard error on the
+rem  console, where the operator reads what the helper measured.
+rem ============================================================
+
+:visibility
+set "UV_ACCOUNT=%~1"
+set "UV_ACTION=%~2"
+set "UV_NAME="
+for /f "usebackq delims=" %%n in (`powershell -noprofile -executionpolicy bypass -command "& C:\Admin\Scripts\ps\resolve-logon-name.ps1 -username $env:UV_ACCOUNT -local; exit $LASTEXITCODE"`) do set "UV_NAME=%%n"
+
+if not defined UV_NAME (
+	echo [31mERROR     : the name %UV_ACCOUNT% signs in under could not be read on this machine, nothing was written [0m
+	echo [94mUSAGE     : hide and show act on the sign-in screen, which lists local accounts only [0m
+	exit /b 1
+)
+
+if /I "%UV_ACTION%"=="show" (
+	echo [36mRECIPE    : Showing %UV_NAME% on the sign-in screen [0m
+	reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts\UserList" /v "%UV_NAME%" /f
+	exit /b 0
+)
+
+echo [36mRECIPE    : Hiding %UV_NAME% from the sign-in screen [0m
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts\UserList" /t REG_DWORD /f /d 0 /v "%UV_NAME%"
+exit /b 0
