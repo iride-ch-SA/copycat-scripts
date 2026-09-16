@@ -58,7 +58,7 @@ if "%~1"=="install" (
 	rem that no package came back. That is exactly what the first run on a Wild Cat produced,
 	rem 2026-08-20, and the cause was unrecoverable afterwards. The file stays on disk on
 	rem purpose: it is the evidence for whoever looks at the failure. -command, not -file,
-	rem because that is the form already in exercise in HID.bat and User.bat.
+	rem because that is the form already in exercise in Machine.bat and User.bat.
 	set "NV_LOG=%NV_DIR%\lookup.log"
 
 	echo [36mRECIPE    : Detecting the NVIDIA GPU and looking up its current driver [0m
