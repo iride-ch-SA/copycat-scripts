@@ -47,7 +47,7 @@ in the dispatcher but are **not implemented**.
 | [`prepare`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-prepare) | Prepares folders, PATH, utilities, users, the machine name, deployment | `cats prepare AdminFolders`, `cats prepare WireGuard users`, `cats prepare Machine` |
 | [`create`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-create) | Creates local users and the hardware identifier | `cats create Admin mario`, `cats create Machine` |
 | [`deploy`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-deploy) | Registers what has to keep running on the machine after the deployment | `cats deploy Userlogin` |
-| [`clean`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-clean) | Disk cleanup, sfc, DISM, network reset, password reset | `cats clean disks`, `cats clean itadmin` |
+| [`clean`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-clean) | Disk cleanup, sfc, DISM, network reset, password reset, software removal | `cats clean disks`, `cats clean itadmin`, `cats clean Microsoft.Teams` |
 
 Passwords are never typed on the command line: `cats create`, `cats clean User` and
 `cats clean itadmin` ask for them, or generate a random one with the `random` keyword.
@@ -56,7 +56,7 @@ Passwords are never typed on the command line: `cats create`, `cats clean User` 
 
 `Acronis.Agent`, `Adobe.Acrobat.Reader`, `BgInfo`, `Cats.AdminFolders`, `Cats.Base`, `Cats.Scripts`,
 `Cats.Utils`, `G360.Support`, `Google.GWSMO`, `HPSA9`, `LibreOffice`, `Machine`, `Microsoft.Office`,
-`Nvidia`, `TeamViewerQS`, `User`, `Userlogin`, `WireGuard`. One page each in the
+`Microsoft.Teams`, `Nvidia`, `TeamViewerQS`, `User`, `Userlogin`, `WireGuard`. One page each in the
 [Recipes](https://github.com/iride-ch-SA/copycat-scripts/wiki/Recipes) index.
 
 ### Scripts outside cats
