@@ -11,6 +11,14 @@ if "%~2"=="" (
 )
 SET "PARAM2=%~2"
 
+rem The third parameter is read here, outside every block. A block is
+rem parsed as one command and every %VAR% in it is substituted before
+rem the first line of it runs, so a SET written inside the local-user
+rem block reached reg with the value the variable had BEFORE the call -
+rem nothing at all on the first run in a prompt. The name to hide or to
+rem show never got through, and reg was handed an empty one
+SET "PARAM3=%~3"
+
 IF /I "%PARAM1%"=="news-and-interests" ( 
 	IF /I "%PARAM2%"=="disable" ( 
 		echo Disable AllowNewsAndInterests
@@ -38,8 +46,7 @@ IF /I "%PARAM1%"=="local-user" (
 		echo ERROR: You must specify a user name as third parameter
 		exit /b 1
 	)
-	SET "PARAM3=%~3"
-	
+
 	reg delete "HKLM\Software\Policies\Microsoft\Windows\System" /v DontEnumerateConnectedUsers /f
 	reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System" /t REG_DWORD /v dontdisplaylastusername /d "0" /f
 	IF /I "%PARAM2%"=="show" ( 
