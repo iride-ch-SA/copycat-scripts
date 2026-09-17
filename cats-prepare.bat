@@ -18,14 +18,6 @@ for %%a in (%*) do (
 		powershell -command "Install-Module PSWindowsUpdate -Force"
 		powershell -command "Set-PSRepository -Name 'PSGallery' -InstallationPolicy Trusted"
 	)
-
-	if /I "%%a"=="deploy-azure" (
-		echo [36mConfigure System for Azure joining[0m 
-		echo [36m Show AAD Users on Login Screen[0m
-		call C:\Admin\Scripts\set-registry.bat aad-users show
-		echo [36m Hide itadmin from Login Screen[0m
-		call C:\Admin\Scripts\set-registry.bat local-user hide itadmin
-	)
 )
 
 echo [92mDONE     [96m : CopyCat Prepare[0m
