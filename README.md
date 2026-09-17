@@ -44,9 +44,9 @@ in the dispatcher but are **not implemented**.
 |---|---|---|
 | [`install`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-install) | Installs a recipe, a shortcut, or any winget package name | `cats install Cats.Base`, `cats install TeamViewerQS`, `cats install 7zip.7zip` |
 | [`update`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-update) | Updates the scripts, Office, winget packages and Windows | `cats update Scripts`, `cats update Windows` |
-| [`prepare`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-prepare) | Prepares folders, PATH, utilities, users, the machine name, deployment | `cats prepare AdminFolders`, `cats prepare WireGuard users`, `cats prepare Machine` |
+| [`prepare`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-prepare) | Prepares folders, PATH, utilities, users and the machine name | `cats prepare AdminFolders`, `cats prepare WireGuard users`, `cats prepare Machine` |
 | [`create`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-create) | Creates local users and the hardware identifier | `cats create Admin mario`, `cats create Machine` |
-| [`deploy`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-deploy) | Registers what has to keep running on the machine after the deployment | `cats deploy Userlogin` |
+| [`deploy`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-deploy) | Registers what has to keep running on the machine, and gets it ready for the tenant it joins | `cats deploy Userlogin`, `cats deploy Tenant365` |
 | [`clean`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-clean) | Disk cleanup, sfc, DISM, network reset, password reset, software removal | `cats clean disks`, `cats clean itadmin`, `cats clean Microsoft.Teams` |
 
 Passwords are never typed on the command line: `cats create`, `cats clean User` and
@@ -56,8 +56,8 @@ Passwords are never typed on the command line: `cats create`, `cats clean User` 
 
 `Acronis.Agent`, `Adobe.Acrobat.Reader`, `BgInfo`, `Cats.AdminFolders`, `Cats.Base`, `Cats.Scripts`,
 `Cats.Utils`, `G360.Support`, `Google.GWSMO`, `HPSA9`, `LibreOffice`, `Machine`, `Microsoft.Office`,
-`Microsoft.Teams`, `Nvidia`, `TeamViewerQS`, `User`, `Userlogin`, `WireGuard`. One page each in the
-[Recipes](https://github.com/iride-ch-SA/copycat-scripts/wiki/Recipes) index.
+`Microsoft.Teams`, `Nvidia`, `TeamViewerQS`, `Tenant365`, `User`, `Userlogin`, `WireGuard`. One page
+each in the [Recipes](https://github.com/iride-ch-SA/copycat-scripts/wiki/Recipes) index.
 
 ### Scripts outside cats
 
