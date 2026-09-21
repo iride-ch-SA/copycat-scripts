@@ -55,9 +55,10 @@ Passwords are never typed on the command line: `cats create`, `cats clean User` 
 ### Recipes
 
 `Acronis.Agent`, `Adobe.Acrobat.Reader`, `BgInfo`, `Cats.AdminFolders`, `Cats.Base`, `Cats.Scripts`,
-`Cats.Utils`, `G360.Support`, `Google.GWSMO`, `HPSA9`, `LibreOffice`, `Machine`, `Microsoft.Office`,
-`Microsoft.Teams`, `Nvidia`, `TeamViewerQS`, `Tenant365`, `User`, `Userlogin`, `WireGuard`. One page
-each in the [Recipes](https://github.com/iride-ch-SA/copycat-scripts/wiki/Recipes) index.
+`Cats.Utils`, `Drivers`, `G360.Support`, `Google.GWSMO`, `HPSA9`, `LibreOffice`, `Machine`,
+`Microsoft.Office`, `Microsoft.Teams`, `Nvidia`, `TeamViewerQS`, `Tenant365`, `User`, `Userlogin`,
+`WireGuard`. One page each in the
+[Recipes](https://github.com/iride-ch-SA/copycat-scripts/wiki/Recipes) index.
 
 ### Scripts outside cats
 
