@@ -58,11 +58,6 @@ for %%a in (%*) do (
 			)
 		)
 	)
-	
-	if /I "%%a"=="wildcat-deploy" (
-		echo [36mSHORTCUT  : Remove VM drivers [0m
-		winget uninstall RedHat.VirtIO --accept-source-agreements
-	)
 )
 
 echo [92mDONE     [96m : CopyCat Clean[0m
