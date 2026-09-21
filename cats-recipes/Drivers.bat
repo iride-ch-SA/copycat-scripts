@@ -40,7 +40,7 @@ if /I "%~1"=="install" (
 	rem read back inside the same block
 	if /I "%~2"=="check" ( set DRV_ARGS=-Check )
 
-	echo [36mRECIPE    : Checking which devices need a driver, and what %DRV_DIR% has for them [0m
+	echo [36mRECIPE    : Checking which devices need a driver, and what %DRV_DIR% has for them [0m
 
 	rem -command, not -file: the wiki prescribes it for this repository. The
 	rem trailing exit re-raises the code, which -command alone flattens to 1
@@ -48,19 +48,19 @@ if /I "%~1"=="install" (
 
 	rem errorlevel is greater-or-equal, so the codes are asked top down
 	if errorlevel 3 (
-		echo [33mWARNING   : A device needs a driver and %DRV_DIR% has nothing that fits it, see the lines above [0m
+		echo [33mWARNING   : A device needs a driver and %DRV_DIR% has nothing that fits it, see the lines above [0m
 		exit /b 3
 	)
 	if errorlevel 2 (
-		echo [31mERROR     : A driver package failed to install, the reason is in the lines above [0m
+		echo [31mERROR     : A driver package failed to install, the reason is in the lines above [0m
 		exit /b 2
 	)
 	if errorlevel 1 (
-		echo [36mRECIPE    : No driver was needed on this machine [0m
+		echo [36mRECIPE    : No driver was needed on this machine [0m
 		exit /b 1
 	)
 
-	echo [92mDONE     [96m : Drivers installed from %DRV_DIR%[0m
+	echo [92mDONE     [96m : Drivers installed from %DRV_DIR%[0m
 	exit /b 0
 )
 
