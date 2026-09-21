@@ -1,4 +1,7 @@
 @echo off
+
+rem  CATS_HOME is the copy this run reads its .bat files from, see cats-shadow.bat
+if not defined CATS_HOME set "CATS_HOME=C:\Admin\Scripts"
 echo [96m----- Set Background Script[0m [92mSTARTED[0m [96m-----[0m 
 
 if "%~1"=="get" (
@@ -34,8 +37,8 @@ if not "%~1"=="remove" IF NOT EXIST "C:\Admin\Scripts\config\%username%.bgi" IF 
 
 IF NOT EXIST "C:\Admin\Apps\Bginfo.exe" (
 	echo [36mBgInfo not found in C:\Admin\Apps, installing it[0m
-	if exist C:\Admin\Scripts\cats-recipes\BgInfo.bat (
-		call C:\Admin\Scripts\cats-recipes\BgInfo.bat install
+	if exist "%CATS_HOME%\cats-recipes\BgInfo.bat" (
+		call "%CATS_HOME%\cats-recipes\BgInfo.bat" install
 	)
 )
 

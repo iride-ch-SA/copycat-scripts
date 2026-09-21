@@ -1,6 +1,9 @@
 @echo off
 setlocal
 
+rem  CATS_ROOT is where cats is installed, see cats-shadow.bat
+if not defined CATS_ROOT set "CATS_ROOT=C:\Admin\Scripts"
+
 rem ============================================================
 rem  Microsoft.Teams
 rem  cats clean Microsoft.Teams takes every Teams off this
@@ -19,7 +22,7 @@ rem ============================================================
 if /I "%~1"=="clean" (
 
 	echo [36mRECIPE    : Removing every Microsoft Teams installation from this machine [0m
-	powershell -noprofile -executionpolicy bypass -command "& C:\Admin\Scripts\ps\remove-teams.ps1; exit $LASTEXITCODE"
+	powershell -noprofile -executionpolicy bypass -command "& %CATS_ROOT%\ps\remove-teams.ps1; exit $LASTEXITCODE"
 
 	rem if errorlevel is greater-or-equal, so 2 is asked before 1. The
 	rem closing lines are painted by PowerShell rather than by an escape

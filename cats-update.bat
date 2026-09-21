@@ -1,14 +1,19 @@
 @echo off
 setlocal enabledelayedexpansion
 
+rem  CATS_HOME is the copy this run reads its .bat files from, see cats-shadow.bat
+rem  CATS_ROOT is where cats is installed, see cats-shadow.bat
+if not defined CATS_ROOT set "CATS_ROOT=C:\Admin\Scripts"
+if not defined CATS_HOME set "CATS_HOME=%CATS_ROOT%"
+
 echo [95mSTARTING [96m : CopyCat Update[0m
 
 for %%a in (%*) do (
-	if exist C:\Admin\Scripts\cats-recipes\%%a.bat ( 
-		call "C:\Admin\Scripts\cats-recipes\%%a.bat" update %2 %3 %4 %5 %6 %7 %8 %9
+	if exist "%CATS_HOME%\cats-recipes\%%a.bat" ( 
+		call "%CATS_HOME%\cats-recipes\%%a.bat" update %2 %3 %4 %5 %6 %7 %8 %9
 	) else (
-		if exist C:\Admin\Scripts\cats-recipes\Cats.%%a.bat (
-			call "C:\Admin\Scripts\cats-recipes\Cats.%%a.bat" update %2 %3 %4 %5 %6 %7 %8 %9
+		if exist "%CATS_HOME%\cats-recipes\Cats.%%a.bat" (
+			call "%CATS_HOME%\cats-recipes\Cats.%%a.bat" update %2 %3 %4 %5 %6 %7 %8 %9
 		)
 	)
 	
@@ -23,12 +28,12 @@ for %%a in (%*) do (
 		rem helper answers 1 for "come back after a restart" and the chain
 		rem runs this step again until a pass answers 0.
 		rem The exit tail is what carries that 1 past powershell -command
-		powershell -noprofile -executionpolicy bypass -command "& C:\Admin\Scripts\ps\windows-update.ps1; exit $LASTEXITCODE"
+		powershell -noprofile -executionpolicy bypass -command "& %CATS_ROOT%\ps\windows-update.ps1; exit $LASTEXITCODE"
 		if errorlevel 2 (
 			echo [31mERROR     : Windows Update could not be driven from here, the reason is in the lines above [0m
 		) else (
 			if errorlevel 1 (
-				call C:\Admin\Scripts\cats-resume.bat request again
+				call "%CATS_HOME%\cats-resume.bat" request again
 			)
 		)
 	)

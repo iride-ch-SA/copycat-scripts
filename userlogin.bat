@@ -1,6 +1,9 @@
 @echo off
+
+rem  CATS_HOME is the copy this run reads its .bat files from, see cats-shadow.bat
+if not defined CATS_HOME set "CATS_HOME=C:\Admin\Scripts"
 REM **** Set the background
-call C:\Admin\Scripts\set-background.bat
+call "%CATS_HOME%\set-background.bat"
 
 IF EXIST "C:\Admin\Others\%username%.bat" (
 	echo Calling local %username%.bat Script

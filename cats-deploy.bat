@@ -1,6 +1,9 @@
 @echo off
 setlocal enabledelayedexpansion
 
+rem  CATS_HOME is the copy this run reads its .bat files from, see cats-shadow.bat
+if not defined CATS_HOME set "CATS_HOME=C:\Admin\Scripts"
+
 echo [95mSTARTING [96m : CopyCat Deploy[0m
 
 rem A recipe can take its own arguments, and the loop walks over those
@@ -11,13 +14,13 @@ rem here - what comes after belongs to the recipe, which judges it itself
 set deploy_matched=0
 
 for %%a in (%*) do (
-	if exist C:\Admin\Scripts\cats-recipes\%%a.bat ( 
+	if exist "%CATS_HOME%\cats-recipes\%%a.bat" ( 
 		set deploy_matched=1
-		call "C:\Admin\Scripts\cats-recipes\%%a.bat" deploy %2 %3 %4 %5 %6 %7 %8 %9
+		call "%CATS_HOME%\cats-recipes\%%a.bat" deploy %2 %3 %4 %5 %6 %7 %8 %9
 	) else (
-		if exist C:\Admin\Scripts\cats-recipes\Cats.%%a.bat (
+		if exist "%CATS_HOME%\cats-recipes\Cats.%%a.bat" (
 			set deploy_matched=1
-			call "C:\Admin\Scripts\cats-recipes\Cats.%%a.bat" deploy %2 %3 %4 %5 %6 %7 %8 %9
+			call "%CATS_HOME%\cats-recipes\Cats.%%a.bat" deploy %2 %3 %4 %5 %6 %7 %8 %9
 		) else (
 			if "!deploy_matched!"=="0" echo [33mWARNING   : %%a is not a copycat recipe, there is nothing to deploy [0m
 		)

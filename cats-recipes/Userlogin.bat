@@ -1,8 +1,11 @@
 @echo off
 setlocal
 
+rem  CATS_ROOT is where cats is installed, see cats-shadow.bat
+if not defined CATS_ROOT set "CATS_ROOT=C:\Admin\Scripts"
+
 set userlogin_task=Run userlogin script
-set userlogin_script=C:\Admin\Scripts\userlogin.bat
+set userlogin_script=%CATS_ROOT%\userlogin.bat
 set userlogin_others=C:\Admin\Others
 
 if /I "%~1"=="deploy" (
@@ -62,7 +65,7 @@ rem that code only survives the call because of the exit $LASTEXITCODE tail:
 rem powershell -command hands back 1 for any non zero code without it, so the
 rem two outcomes would arrive as the same number. Tested from the highest
 rem code down, the way if errorlevel works
-powershell -noprofile -executionpolicy bypass -command "& C:\Admin\Scripts\ps\register-logon-task.ps1 -taskname '%userlogin_task%' -command '%userlogin_script%' -sid S-1-5-32-545; exit $LASTEXITCODE"
+powershell -noprofile -executionpolicy bypass -command "& %CATS_ROOT%\ps\register-logon-task.ps1 -taskname '%userlogin_task%' -command '%userlogin_script%' -sid S-1-5-32-545; exit $LASTEXITCODE"
 if errorlevel 3 (
 	echo [33mWARNING   : "%userlogin_task%" was already registered for every user of this machine, and was left as it is [0m
 	echo [94mUSAGE     : there is nothing to deploy twice. Delete it with schtasks /delete /tn "%userlogin_task%" /f to register it from scratch [0m
@@ -114,7 +117,7 @@ rem on the console, where the operator reads what the helper measured
 set "UL_ACCOUNT=%~1"
 set "UL_NAME="
 echo [36mRECIPE    : Looking for the name %UL_ACCOUNT% signs in under [0m
-for /f "usebackq delims=" %%n in (`powershell -noprofile -executionpolicy bypass -command "& C:\Admin\Scripts\ps\resolve-logon-name.ps1 -username $env:UL_ACCOUNT; exit $LASTEXITCODE"`) do set "UL_NAME=%%n"
+for /f "usebackq delims=" %%n in (`powershell -noprofile -executionpolicy bypass -command "& %CATS_ROOT%\ps\resolve-logon-name.ps1 -username $env:UL_ACCOUNT; exit $LASTEXITCODE"`) do set "UL_NAME=%%n"
 
 if not defined UL_NAME (
 	echo [31mERROR     : no sign-in name could be worked out for %UL_ACCOUNT%, nothing was written [0m

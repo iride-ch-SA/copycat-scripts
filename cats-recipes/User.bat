@@ -1,6 +1,9 @@
 @echo off
 setlocal
 
+rem  CATS_ROOT is where cats is installed, see cats-shadow.bat
+if not defined CATS_ROOT set "CATS_ROOT=C:\Admin\Scripts"
+
 if /I "%~1"=="create" (
 	if "%~2"=="" (
 		echo [31mERROR     : You must specify a username as second parameter [0m
@@ -45,7 +48,7 @@ if /I "%~1"=="create" (
 	rem The name travels in the environment: it is quoted once, by nobody,
 	rem and a quote or a space in it cannot reach the PowerShell parser.
 	set "CATS_MEMBER=%~2"
-	powershell -noprofile -executionpolicy bypass -command "& C:\Admin\Scripts\ps\test-local-name.ps1 -username $env:CATS_MEMBER; exit $LASTEXITCODE"
+	powershell -noprofile -executionpolicy bypass -command "& %CATS_ROOT%\ps\test-local-name.ps1 -username $env:CATS_MEMBER; exit $LASTEXITCODE"
 	if errorlevel 1 (
 		echo [94mUSAGE     : cats create User creates a local account. An account that lives in a domain or in a tenant is not created here: use cats prepare Userlogin and cats prepare WireGuard on the account as it is [0m
 		exit /b 2
@@ -53,12 +56,12 @@ if /I "%~1"=="create" (
 
 	if /I "%~3"=="ask" (
 		echo [36mRECIPE    : Create the user, the password is typed without being shown [0m
-		powershell -noprofile -executionpolicy bypass -command C:\Admin\Scripts\ps\set-user-password.ps1 "%~2" ask -create
+		powershell -noprofile -executionpolicy bypass -command %CATS_ROOT%\ps\set-user-password.ps1 "%~2" ask -create
 		if errorlevel 1 exit /b 1
 	) else (
 		if /I "%~3"=="random" (
 			echo [36mRECIPE    : Create the user with a generated password [0m
-			powershell -noprofile -executionpolicy bypass -command C:\Admin\Scripts\ps\set-user-password.ps1 "%~2" random -create
+			powershell -noprofile -executionpolicy bypass -command %CATS_ROOT%\ps\set-user-password.ps1 "%~2" random -create
 			if errorlevel 1 exit /b 1
 		) else (
 			echo [33mWARNING   : The password is on the command line and any process listing can read it. Use ask or random instead [0m
@@ -80,7 +83,7 @@ if /I "%~1"=="create" (
 	rem meets, whatever code it exited with, so the code is re-raised.
 	rem CATS_MEMBER already holds the name, set before the guard above.
 	echo [36mRECIPE    : Adding user to the Users group [0m
-	powershell -noprofile -executionpolicy bypass -command "& C:\Admin\Scripts\ps\set-localgroup-member.ps1 -username $env:CATS_MEMBER -sid S-1-5-32-545; exit $LASTEXITCODE"
+	powershell -noprofile -executionpolicy bypass -command "& %CATS_ROOT%\ps\set-localgroup-member.ps1 -username $env:CATS_MEMBER -sid S-1-5-32-545; exit $LASTEXITCODE"
 	if errorlevel 2 exit /b 2
 
 	rem The built-in groups are named by SID and never by name: on a
@@ -90,12 +93,12 @@ if /I "%~1"=="create" (
 	rem fails wherever that group is not called that
 	if /I "%~4"=="Administrators" (
 		echo [36mRECIPE    : Adding user to the Administrators group [0m
-		powershell -noprofile -executionpolicy bypass -command "& C:\Admin\Scripts\ps\set-localgroup-member.ps1 -username $env:CATS_MEMBER -sid S-1-5-32-544; exit $LASTEXITCODE"
+		powershell -noprofile -executionpolicy bypass -command "& %CATS_ROOT%\ps\set-localgroup-member.ps1 -username $env:CATS_MEMBER -sid S-1-5-32-544; exit $LASTEXITCODE"
 		if errorlevel 2 exit /b 2
 	) else (
 		if /I not "%~4"=="no-rdp" (
 			echo [36mRECIPE    : Adding non-administrative user to the Remote Desktop Users group [0m
-			powershell -noprofile -executionpolicy bypass -command "& C:\Admin\Scripts\ps\set-localgroup-member.ps1 -username $env:CATS_MEMBER -sid S-1-5-32-555; exit $LASTEXITCODE"
+			powershell -noprofile -executionpolicy bypass -command "& %CATS_ROOT%\ps\set-localgroup-member.ps1 -username $env:CATS_MEMBER -sid S-1-5-32-555; exit $LASTEXITCODE"
 			if errorlevel 2 exit /b 2
 		)
 	)
@@ -133,14 +136,14 @@ if /I "%~1"=="clean" (
 
 	if /I "%~3"=="ask" (
 		echo [36mRECIPE    : Password typed without being shown, account enabled and without expiration date [0m
-		powershell -noprofile -executionpolicy bypass -command C:\Admin\Scripts\ps\set-user-password.ps1 "%~2" ask
+		powershell -noprofile -executionpolicy bypass -command %CATS_ROOT%\ps\set-user-password.ps1 "%~2" ask
 		if errorlevel 1 exit /b 1
 		exit /b 0
 	)
 
 	if /I "%~3"=="random" (
 		echo [36mRECIPE    : New random password, account enabled and without expiration date [0m
-		powershell -noprofile -executionpolicy bypass -command C:\Admin\Scripts\ps\set-user-password.ps1 "%~2" random
+		powershell -noprofile -executionpolicy bypass -command %CATS_ROOT%\ps\set-user-password.ps1 "%~2" random
 		if errorlevel 1 exit /b 1
 		exit /b 0
 	)
@@ -195,7 +198,7 @@ rem ============================================================
 set "UV_ACCOUNT=%~1"
 set "UV_ACTION=%~2"
 set "UV_NAME="
-for /f "usebackq delims=" %%n in (`powershell -noprofile -executionpolicy bypass -command "& C:\Admin\Scripts\ps\resolve-logon-name.ps1 -username $env:UV_ACCOUNT -local; exit $LASTEXITCODE"`) do set "UV_NAME=%%n"
+for /f "usebackq delims=" %%n in (`powershell -noprofile -executionpolicy bypass -command "& %CATS_ROOT%\ps\resolve-logon-name.ps1 -username $env:UV_ACCOUNT -local; exit $LASTEXITCODE"`) do set "UV_NAME=%%n"
 
 if not defined UV_NAME (
 	echo [31mERROR     : the name %UV_ACCOUNT% signs in under could not be read on this machine, nothing was written [0m

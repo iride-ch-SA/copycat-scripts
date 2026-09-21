@@ -1,6 +1,9 @@
 @echo off
 setlocal enabledelayedexpansion
 
+rem  CATS_HOME is the copy this run reads its .bat files from, see cats-shadow.bat
+if not defined CATS_HOME set "CATS_HOME=C:\Admin\Scripts"
+
 rem ============================================================
 rem  Wildcat
 rem  cats clean wildcat (or cats clean cats.wildcat) turns a
@@ -53,7 +56,7 @@ if /I "%~1"=="clean" (
 		for /f "delims=" %%i in ('powershell -noprofile -command "if ((Get-CimInstance Win32_Processor).Manufacturer -match 'Intel') { 'yes' } else { 'no' }"') do set WC_INTEL=%%i
 		if /I "!WC_INTEL!"=="yes" (
 			echo [36mRECIPE    : Intel CPU found, installing Intel Driver and Support Assistant [0m
-			call C:\Admin\Scripts\cats-install.bat inteldasa
+			call "%CATS_HOME%\cats-install.bat" inteldasa
 		) else (
 			echo [36mRECIPE    : No Intel CPU, skipping Intel Driver and Support Assistant [0m
 		)
@@ -62,7 +65,7 @@ if /I "%~1"=="clean" (
 		for /f "delims=" %%i in ('powershell -noprofile -command "if (Get-CimInstance Win32_VideoController | Where-Object { $_.Name -match 'NVIDIA' }) { 'yes' } else { 'no' }"') do set WC_NVIDIA=%%i
 		if /I "!WC_NVIDIA!"=="yes" (
 			echo [36mRECIPE    : NVIDIA GPU found, installing the driver [0m
-			call C:\Admin\Scripts\cats-install.bat Nvidia
+			call "%CATS_HOME%\cats-install.bat" Nvidia
 		) else (
 			echo [36mRECIPE    : No NVIDIA GPU, skipping the driver [0m
 		)
@@ -78,7 +81,7 @@ if /I "%~1"=="clean" (
 
 	echo [36mRECIPE    : Turning this machine into a Wild Cat: %WC_CHAIN% [0m
 	echo [94mUSAGE     : it restarts on its own where it has to. Sign in as an administrator afterwards and it carries on [0m
-	call C:\Admin\Scripts\cats-resume.bat open "clean Wildcat" "%WC_CHAIN%"
+	call "%CATS_HOME%\cats-resume.bat" open "clean Wildcat" "%WC_CHAIN%"
 	if errorlevel 2 (
 		echo [31mERROR     : the chain was not started, the lines above say why [0m
 		exit /b 2

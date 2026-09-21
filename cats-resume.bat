@@ -1,4 +1,25 @@
 @echo off
+
+rem  This run reads its .bat files from a copy under %TEMP% and
+rem  not from C:\Admin\Scripts, so that cats update Scripts can
+rem  pull over the installation while the run is still going.
+rem  cats-shadow.bat makes the copy and sets CATS_HOME and
+rem  CATS_ROOT; the hand over below is a batch call WITHOUT
+rem  "call", which ends this file instead of coming back to it -
+rem  that is the whole point, cmd must be left with no offset
+rem  into a file git is about to rewrite. See cats-shadow.bat
+if defined CATS_HOME goto :shadowed
+call "%~dp0cats-shadow.bat"
+if errorlevel 1 goto :shadowed
+"%CATS_HOME%\cats-resume.bat" %*
+exit /b %errorlevel%
+
+:shadowed
+rem  If cats-shadow.bat is not there at all, this run is the one cats
+rem  did before it existed: it works, bar cats update Scripts
+if not defined CATS_ROOT set "CATS_ROOT=C:\Admin\Scripts"
+if not defined CATS_HOME set "CATS_HOME=%CATS_ROOT%"
+
 setlocal enabledelayedexpansion
 
 rem ============================================================
@@ -46,7 +67,7 @@ set RESUME_DIR=C:\Admin\Others
 set RESUME_STATE=C:\Admin\Others\resume.state
 set RESUME_FLAG=C:\Admin\Others\resume.reboot
 set RESUME_TASK=Resume cats chain
-set RESUME_SELF=C:\Admin\Scripts\cats-resume.bat
+set RESUME_SELF=%CATS_ROOT%\cats-resume.bat
 set RESUME_MAXCYCLE=8
 set RESUME_WAIT=20
 
@@ -175,7 +196,7 @@ if errorlevel 1 exit /b 2
 if exist "%RESUME_FLAG%" del /f /q "%RESUME_FLAG%" >nul 2>&1
 
 echo [36mRESUME    : cats !RS_STEP! [0m
-call C:\Admin\Scripts\cats.bat !RS_STEP!
+call "%CATS_HOME%\cats.bat" !RS_STEP!
 
 if not exist "%RESUME_FLAG%" goto :step
 
@@ -325,7 +346,7 @@ if not exist "%RESUME_SELF%" (
 	exit /b 2
 )
 echo [36mRECIPE    : Registering "%RESUME_TASK%" so the chain continues after the restart [0m
-powershell -noprofile -executionpolicy bypass -command "& C:\Admin\Scripts\ps\register-logon-task.ps1 -taskname '%RESUME_TASK%' -command '%RESUME_SELF%' -sid S-1-5-32-544 -elevated -timelimit PT4H -quiet; exit $LASTEXITCODE"
+powershell -noprofile -executionpolicy bypass -command "& %CATS_ROOT%\ps\register-logon-task.ps1 -taskname '%RESUME_TASK%' -command '%RESUME_SELF%' -sid S-1-5-32-544 -elevated -timelimit PT4H -quiet; exit $LASTEXITCODE"
 rem 3 is "already registered exactly as asked", which is what every
 rem restart after the first one meets, and it is not a failure
 if errorlevel 4 exit /b 2

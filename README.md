@@ -12,6 +12,20 @@ Git is the update mechanism, so **every commit on `main` is a release**: `cats u
 The repository is **public** — nothing confidential goes into it, and whatever is committed stays in
 the history even if removed later.
 
+A run of `cats` does not read its own `.bat` files from `C:\Admin\Scripts`: `cats.bat` copies the
+installation into a folder of its own under `%TEMP%` and hands over to the copy. `cmd.exe` keeps a
+byte offset into the batch file it is running and reopens it after every command, so a `git pull`
+over the files being read makes it carry on in the middle of the new content — half a line as a
+command, a block outside the `if` that guards it, the dispatcher a second time. The copy is what
+makes `cats update Scripts` safe while a chain is running. `CATS_HOME` is that copy, `CATS_ROOT` is
+the installation itself: `git`, the system PATH, the `.ps1` helpers, the configuration files and the
+scheduled tasks all point at `CATS_ROOT`. See `cats-shadow.bat`.
+
+The update reaches the run that pulled it only from the **next** command on, which is what a copy in
+`%TEMP%` means. And there is one pull that cannot be safe, the one that brings this mechanism to a
+machine that does not have it yet: install it with `git -C C:\Admin\Scripts pull` from an elevated
+prompt, not with `cats update Scripts`.
+
 ## Installation
 
 From an **elevated** cmd prompt:
@@ -73,7 +87,8 @@ Passwords are never typed on the command line: `cats create`, `cats clean User` 
 `sysprep.bat`, `rm-winget-source.bat`, `set-background.bat`, `set-registry.bat`,
 `set-permissions.bat`, `reset-power-settings.bat`, `hasher.bat`,
 `do-updates.bat`, `userlogin.bat` and a few more are called directly from
-`C:\Admin\Scripts`. `cmda.bat` opens a cmd prompt as Administrator.
+`C:\Admin\Scripts`. `cmda.bat` opens a cmd prompt as Administrator. `cats-shadow.bat` is called by
+the entry points only, never by hand.
 
 ## Documentation
 

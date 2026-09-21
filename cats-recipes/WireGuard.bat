@@ -1,8 +1,13 @@
 @echo off
 setlocal
 
+rem  CATS_HOME is the copy this run reads its .bat files from, see cats-shadow.bat
+rem  CATS_ROOT is where cats is installed, see cats-shadow.bat
+if not defined CATS_ROOT set "CATS_ROOT=C:\Admin\Scripts"
+if not defined CATS_HOME set "CATS_HOME=%CATS_ROOT%"
+
 if /I "%~1"=="install" (
-	call C:\Admin\Scripts\cats-install-winget.bat WireGuard.WireGuard
+	call "%CATS_HOME%\cats-install-winget.bat" WireGuard.WireGuard
 	exit /b 0
 )
 
@@ -15,7 +20,7 @@ if /I "%~1"=="prepare" (
 	)
 
 	echo [36mRECIPE    : Allowing the WireGuard user interface to non-administrators [0m
-	call C:\Admin\Scripts\set-registry.bat wireguard-nonadmin-users enable
+	call "%CATS_HOME%\set-registry.bat" wireguard-nonadmin-users enable
 
 	rem The value is read back: without elevation the write above fails
 	rem and reg says so on its own line, which is easy to scroll past
@@ -30,12 +35,12 @@ if /I "%~1"=="prepare" (
 	rem whatever code it exited with, so the code is re-raised explicitly
 	if /I "%~2"=="users" (
 		echo [36mRECIPE    : Looking for the non-administrative accounts of this machine [0m
-		powershell -noprofile -executionpolicy bypass -command "& C:\Admin\Scripts\ps\wireguard-operators.ps1 -all; exit $LASTEXITCODE"
+		powershell -noprofile -executionpolicy bypass -command "& %CATS_ROOT%\ps\wireguard-operators.ps1 -all; exit $LASTEXITCODE"
 	) else (
 		rem The name travels in the environment: it is quoted once, by nobody,
 		rem and a quote or a space in it cannot reach the PowerShell parser
 		set "WG_MEMBER=%~2"
-		powershell -noprofile -executionpolicy bypass -command "& C:\Admin\Scripts\ps\wireguard-operators.ps1 -username $env:WG_MEMBER; exit $LASTEXITCODE"
+		powershell -noprofile -executionpolicy bypass -command "& %CATS_ROOT%\ps\wireguard-operators.ps1 -username $env:WG_MEMBER; exit $LASTEXITCODE"
 	)
 	if errorlevel 2 exit /b 2
 

@@ -1,18 +1,21 @@
 @echo off
 setlocal enabledelayedexpansion
 
+rem  CATS_ROOT is where cats is installed, see cats-shadow.bat
+if not defined CATS_ROOT set "CATS_ROOT=C:\Admin\Scripts"
+
 if /I "%~1"=="create" (
 	
 	echo [32mRECIPE    : Executing HID Generator [0m
 	if "%~2"=="" (
-		powershell -noprofile -executionpolicy bypass -command C:\Admin\Scripts\ps\hid-generator.ps1
+		powershell -noprofile -executionpolicy bypass -command %CATS_ROOT%\ps\hid-generator.ps1
 	) else (
 		SET PARAM="%~2"
-		powershell -noprofile -executionpolicy bypass -command C:\Admin\Scripts\ps\hid-generator.ps1 "!PARAM!"
+		powershell -noprofile -executionpolicy bypass -command %CATS_ROOT%\ps\hid-generator.ps1 "!PARAM!"
 	)
 	
 	echo [32mRECIPE    : Writing HID to C:\Admin\Others\HID.txt [0m
-	for /f "delims=" %%i in ('powershell -noprofile -executionpolicy bypass -command "C:\Admin\Scripts\ps\hid-generator.ps1"') do set HID=%%i
+	for /f "delims=" %%i in ('powershell -noprofile -executionpolicy bypass -command "%CATS_ROOT%\ps\hid-generator.ps1"') do set HID=%%i
 	
 	if not exist "C:\Admin\Others" (
 		mkdir "C:\Admin\Others"

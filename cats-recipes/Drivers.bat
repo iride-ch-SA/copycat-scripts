@@ -1,6 +1,11 @@
 @echo off
 setlocal enabledelayedexpansion
 
+rem  CATS_HOME is the copy this run reads its .bat files from, see cats-shadow.bat
+rem  CATS_ROOT is where cats is installed, see cats-shadow.bat
+if not defined CATS_ROOT set "CATS_ROOT=C:\Admin\Scripts"
+if not defined CATS_HOME set "CATS_HOME=%CATS_ROOT%"
+
 rem ============================================================
 rem  Drivers
 rem  cats install Drivers looks at what this machine is actually
@@ -51,14 +56,14 @@ if /I "%~1"=="install" (
 
 	rem -command, not -file: the wiki prescribes it for this repository. The
 	rem trailing exit re-raises the code, which -command alone flattens to 1
-	powershell -noprofile -executionpolicy bypass -command "& C:\Admin\Scripts\ps\driver-scan.ps1 -Path '%DRV_DIR%' !DRV_ARGS!; exit $LASTEXITCODE"
+	powershell -noprofile -executionpolicy bypass -command "& %CATS_ROOT%\ps\driver-scan.ps1 -Path '%DRV_DIR%' !DRV_ARGS!; exit $LASTEXITCODE"
 
 	rem errorlevel is greater-or-equal, so the codes are asked top down
 	if errorlevel 4 (
 		echo [36mRECIPE    : Drivers installed, and a restart is needed before they are fully in charge [0m
 		rem again: the devices this machine is still missing a driver for
 		rem can only be counted once the ones just installed are in charge
-		call C:\Admin\Scripts\cats-resume.bat request again
+		call "%CATS_HOME%\cats-resume.bat" request again
 		exit /b 0
 	)
 	if errorlevel 3 (

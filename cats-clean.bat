@@ -1,14 +1,17 @@
 @echo off
 setlocal enabledelayedexpansion
 
+rem  CATS_HOME is the copy this run reads its .bat files from, see cats-shadow.bat
+if not defined CATS_HOME set "CATS_HOME=C:\Admin\Scripts"
+
 echo [95mSTARTING [96m : CopyCat Clean[0m
 
 for %%a in (%*) do (
-	if exist C:\Admin\Scripts\cats-recipes\%%a.bat ( 
-		call "C:\Admin\Scripts\cats-recipes\%%a.bat" clean %2 %3 %4 %5 %6 %7 %8 %9
+	if exist "%CATS_HOME%\cats-recipes\%%a.bat" ( 
+		call "%CATS_HOME%\cats-recipes\%%a.bat" clean %2 %3 %4 %5 %6 %7 %8 %9
 	) else (
-		if exist C:\Admin\Scripts\cats-recipes\Cats.%%a.bat (
-			call "C:\Admin\Scripts\cats-recipes\Cats.%%a.bat" clean %2 %3 %4 %5 %6 %7 %8 %9
+		if exist "%CATS_HOME%\cats-recipes\Cats.%%a.bat" (
+			call "%CATS_HOME%\cats-recipes\Cats.%%a.bat" clean %2 %3 %4 %5 %6 %7 %8 %9
 		)
 	)
 	
@@ -53,8 +56,8 @@ for %%a in (%*) do (
 	if /I "%%a"=="itadmin" (
 		if /I not "%~1"=="User" (
 			echo [36mSHORTCUT  : New random password for the itadmin account [0m
-			if exist C:\Admin\Scripts\cats-recipes\User.bat (
-				call "C:\Admin\Scripts\cats-recipes\User.bat" clean itadmin "%~2"
+			if exist "%CATS_HOME%\cats-recipes\User.bat" (
+				call "%CATS_HOME%\cats-recipes\User.bat" clean itadmin "%~2"
 			)
 		)
 	)

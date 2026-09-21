@@ -1,6 +1,9 @@
 @echo off
 setlocal
 
+rem  CATS_HOME is the copy this run reads its .bat files from, see cats-shadow.bat
+if not defined CATS_HOME set "CATS_HOME=C:\Admin\Scripts"
+
 rem ============================================================
 rem  Tenant365
 rem  cats deploy Tenant365 gets this machine ready to be joined
@@ -46,7 +49,7 @@ rem  join has to be opened by hand.
 rem ============================================================
 
 set tenant365_account=itadmin
-set tenant365_user_recipe=C:\Admin\Scripts\cats-recipes\User.bat
+set tenant365_user_recipe=%CATS_HOME%\cats-recipes\User.bat
 rem The Settings page the join is done from, and the process that has to be
 rem there afterwards for the page to be considered open
 set tenant365_settings_uri=ms-settings:workplace
@@ -77,7 +80,7 @@ rem had, so reg prints "unable to find the specified registry key or value"
 rem on the way through: that line is expected and is not the outcome. What
 rem is judged is the code the call hands back, which is the one of the last
 rem reg command it runs
-call C:\Admin\Scripts\set-registry.bat aad-users show
+call "%CATS_HOME%\set-registry.bat" aad-users show
 if errorlevel 1 (
 	echo [31mERROR     : the sign-in screen was not changed, and nothing else was tried [0m
 	echo [94mUSAGE     : these are machine-wide settings under HKLM. Run this from an elevated prompt [0m

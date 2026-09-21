@@ -1,6 +1,9 @@
 @echo off
 setlocal enabledelayedexpansion
 
+rem  CATS_ROOT is where cats is installed, see cats-shadow.bat
+if not defined CATS_ROOT set "CATS_ROOT=C:\Admin\Scripts"
+
 rem NVIDIA display driver, full package, plus NVIDIA App.
 rem
 rem The driver package carries the display driver and NVIDIA Control Panel, and it does *not*
@@ -62,7 +65,7 @@ if "%~1"=="install" (
 	set "NV_LOG=%NV_DIR%\lookup.log"
 
 	echo [36mRECIPE    : Detecting the NVIDIA GPU and looking up its current driver [0m
-	powershell -noprofile -executionpolicy bypass -command C:\Admin\Scripts\ps\nvidia-driver-lookup.ps1 !NV_ARGS! > "!NV_LOG!" 2>&1
+	powershell -noprofile -executionpolicy bypass -command %CATS_ROOT%\ps\nvidia-driver-lookup.ps1 !NV_ARGS! > "!NV_LOG!" 2>&1
 
 	for /f "usebackq tokens=1,* delims==" %%k in ("!NV_LOG!") do (
 		if "%%k"=="ERROR" ( set "NV_ERR=%%l" )
@@ -165,7 +168,7 @@ if "%~1"=="install" (
 	set "NV_APPLOG=%NV_DIR%\nvapp-lookup.log"
 
 	powershell -noprofile -command "Write-Host 'RECIPE    : Looking up the current NVIDIA App installer' -ForegroundColor Cyan"
-	powershell -noprofile -executionpolicy bypass -command C:\Admin\Scripts\ps\nvidia-app-lookup.ps1 > "!NV_APPLOG!" 2>&1
+	powershell -noprofile -executionpolicy bypass -command %CATS_ROOT%\ps\nvidia-app-lookup.ps1 > "!NV_APPLOG!" 2>&1
 
 	for /f "usebackq tokens=1,* delims==" %%k in ("!NV_APPLOG!") do (
 		if "%%k"=="ERROR" ( set "NV_APPERR=%%l" )

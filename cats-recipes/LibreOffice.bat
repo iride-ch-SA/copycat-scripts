@@ -1,6 +1,9 @@
 @echo off
 setlocal enabledelayedexpansion
 
+rem  CATS_ROOT is where cats is installed, see cats-shadow.bat
+if not defined CATS_ROOT set "CATS_ROOT=C:\Admin\Scripts"
+
 rem LibreOffice, current release, installed silently in the language of this machine.
 rem
 rem Why not winget. The winget manifest installs the same MSI but passes none of its language
@@ -75,7 +78,7 @@ if "%~1"=="install" (
 	set "LO_LOG=%LO_DIR%\lookup.log"
 
 	echo [36mRECIPE    : Looking up the current LibreOffice and this machine's language [0m
-	powershell -noprofile -executionpolicy bypass -command C:\Admin\Scripts\ps\libreoffice-lookup.ps1 !LO_ARGS! > "!LO_LOG!" 2>&1
+	powershell -noprofile -executionpolicy bypass -command %CATS_ROOT%\ps\libreoffice-lookup.ps1 !LO_ARGS! > "!LO_LOG!" 2>&1
 
 	for /f "usebackq tokens=1,* delims==" %%k in ("!LO_LOG!") do (
 		if "%%k"=="ERROR" ( set "LO_ERR=%%l" )
@@ -138,7 +141,7 @@ if "%~1"=="install" (
 	rem file left by an interrupted run is resumed there, and a truncated one is thrown away -
 	rem handing a half written 375 MB MSI to msiexec would report the installer as the fault.
 	echo [36mRECIPE    : Downloading !LO_FILE! to %LO_DIR%, around 375 MB [0m
-	powershell -noprofile -executionpolicy bypass -command C:\Admin\Scripts\ps\tdf-fetch.ps1 -Path "!LO_RELPATH!" -File "!LO_FILE!" -Out "!LO_MSI!" > "!LO_FETCHLOG!" 2>&1
+	powershell -noprofile -executionpolicy bypass -command %CATS_ROOT%\ps\tdf-fetch.ps1 -Path "!LO_RELPATH!" -File "!LO_FILE!" -Out "!LO_MSI!" > "!LO_FETCHLOG!" 2>&1
 
 	set LO_SOURCE=
 	for /f "usebackq tokens=1,* delims==" %%k in ("!LO_FETCHLOG!") do (
@@ -193,7 +196,7 @@ if "%~1"=="install" (
 		set "LO_HELPLOG=%LO_DIR%\fetch-helppack.log"
 
 		echo [36mRECIPE    : Looking for the !LO_LANG! offline help pack [0m
-		powershell -noprofile -executionpolicy bypass -command C:\Admin\Scripts\ps\tdf-fetch.ps1 -Path "!LO_RELPATH!" -File "!LO_HELPFILE!" -Out "!LO_HELPMSI!" -Optional > "!LO_HELPLOG!" 2>&1
+		powershell -noprofile -executionpolicy bypass -command %CATS_ROOT%\ps\tdf-fetch.ps1 -Path "!LO_RELPATH!" -File "!LO_HELPFILE!" -Out "!LO_HELPMSI!" -Optional > "!LO_HELPLOG!" 2>&1
 
 		set LO_HELPMISS=
 		for /f "usebackq tokens=1,* delims==" %%k in ("!LO_HELPLOG!") do (

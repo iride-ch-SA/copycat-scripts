@@ -1,10 +1,15 @@
 @echo off
 setlocal enabledelayedexpansion
 
+rem  CATS_HOME is the copy this run reads its .bat files from, see cats-shadow.bat
+rem  CATS_ROOT is where cats is installed, see cats-shadow.bat
+if not defined CATS_ROOT set "CATS_ROOT=C:\Admin\Scripts"
+if not defined CATS_HOME set "CATS_HOME=%CATS_ROOT%"
+
 if "%~1"=="install" (
 	winget list --id Microsoft.Office --accept-source-agreements | find /I "Microsoft 365 Apps for enterprise" > nul
 	if !errorlevel! NEQ 0 (
-		call C:\Admin\Scripts\cats-install-winget.bat Microsoft.OfficeDeploymentTool --silent
+		call "%CATS_HOME%\cats-install-winget.bat" Microsoft.OfficeDeploymentTool --silent
 		timeout /t 5 /nobreak > NUL
 		if exist "C:\Program Files\OfficeDeploymentTool\setup.exe" (
 			if exist "C:\Admin\Others\office.xml" (
@@ -12,9 +17,9 @@ if "%~1"=="install" (
 				"C:\Program Files\OfficeDeploymentTool\setup.exe" /configure C:\Admin\Others\office.xml
 				exit /b 0
 			) else (
-				if exist "C:\Admin\Scripts\config\office.xml" (
-					echo [36mMS ODT    : Configuring Office using C:\Admin\Scripts\config\office.xml [0m
-					"C:\Program Files\OfficeDeploymentTool\setup.exe" /configure C:\Admin\Scripts\config\office.xml
+				if exist "%CATS_ROOT%\config\office.xml" (
+					echo [36mMS ODT    : Configuring Office using %CATS_ROOT%\config\office.xml [0m
+					"C:\Program Files\OfficeDeploymentTool\setup.exe" /configure %CATS_ROOT%\config\office.xml
 					exit /b 0
 				) else (
 					echo [31mERROR     : No configurations files was found to install Office Suite[0m

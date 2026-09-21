@@ -1,5 +1,8 @@
 @echo off
 
+rem  CATS_HOME is the copy this run reads its .bat files from, see cats-shadow.bat
+if not defined CATS_HOME set "CATS_HOME=C:\Admin\Scripts"
+
 if "%~1"=="install" (
 	if not exist "C:\Admin\Apps" ( mkdir C:\Admin\Apps )
 
@@ -8,7 +11,7 @@ if "%~1"=="install" (
 
 	if not exist "C:\Admin\Apps\TeamViewerQS.exe" (
 		echo [33mWARNING   : Direct download failed, falling back to winget [0m
-		call C:\Admin\Scripts\cats-install-winget.bat TeamViewer.TeamViewer.QuickSupport --location C:\Admin\Apps
+		call "%CATS_HOME%\cats-install-winget.bat" TeamViewer.TeamViewer.QuickSupport --location C:\Admin\Apps
 	)
 
 	if not exist "C:\Admin\Apps\TeamViewerQS.exe" (
@@ -17,7 +20,7 @@ if "%~1"=="install" (
 	)
 
 	echo [36mRECIPE    : Granting all users the right to run it [0m
-	call C:\Admin\Scripts\set-permissions.bat teamviewerqs
+	call "%CATS_HOME%\set-permissions.bat" teamviewerqs
 
 	echo [36mRECIPE    : Creating Desktop shortcut for all users [0m
 	powershell -noprofile -executionpolicy bypass -command "$s = (New-Object -ComObject WScript.Shell).CreateShortcut('C:\Users\Public\Desktop\TeamViewer QuickSupport.lnk'); $s.TargetPath = 'C:\Admin\Apps\TeamViewerQS.exe'; $s.IconLocation = 'C:\Admin\Apps\TeamViewerQS.exe,0'; $s.Description = 'TeamViewer QuickSupport - remote assistance by iride.ch'; $s.Save()"
