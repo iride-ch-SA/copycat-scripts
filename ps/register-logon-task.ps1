@@ -2,6 +2,8 @@ param(
 	[string]$taskname,
 	[string]$command,
 	[string]$sid = 'S-1-5-32-545',
+	[switch]$elevated,
+	[string]$timelimit = 'PT1H',
 	[switch]$force,
 	[switch]$quiet
 )
@@ -15,6 +17,12 @@ param(
 #    -command <path>   : the batch file or executable it runs
 #    -sid <S-1-5-32-x> : the group the task runs for, always by
 #                        SID, S-1-5-32-545 (Users) by default
+#    -elevated         : the task runs with the highest rights
+#                        the account has, instead of the plain
+#                        unelevated ones
+#    -timelimit <PTnH> : how long the task may run before the
+#                        scheduler stops it, ISO 8601, PT1H by
+#                        default
 #    -force            : register again a task that is already
 #                        there exactly as asked
 #    -quiet            : only problems are printed
@@ -34,6 +42,12 @@ param(
 #  translated on a localised Windows: Users is "Utenti".
 #  The task runs unelevated, with the rights of whoever signs in,
 #  but registering a task for a group needs an elevated prompt.
+#  With -elevated it runs elevated instead, which is what a task
+#  resuming an installation needs and what a logon script does
+#  not: the two are asked for apart on purpose. The run level is
+#  part of what is compared when a task is already there, so an
+#  unelevated task of the same name is rewritten and not taken
+#  for the one that was asked for.
 #  A task that is already registered for the same group and runs
 #  the same command is NOT registered again: it is reported and
 #  left alone, because rewriting it would say nothing and would
@@ -55,6 +69,18 @@ function Write-Recipe {
 function Write-Problem {
 	param([string]$label, [string]$text, [string]$colour)
 	Write-Host ($label.PadRight(10) + ": " + $text) -ForegroundColor $colour
+}
+
+function Resolve-RunLevel {
+	# The run level is a word from the ScheduledTasks module -
+	# Highest or Limited - and another one in an exported
+	# definition - HighestAvailable or LeastPrivilege. Both are
+	# brought to the module's two before being compared
+	param([string]$level)
+
+	if (-not $level) { return 'Limited' }
+	if ($level -match '(?i)^(Highest|HighestAvailable)$') { return 'Highest' }
+	return 'Limited'
 }
 
 function Resolve-Sid {
@@ -133,16 +159,16 @@ function Export-TaskXml {
 }
 
 function Register-WithModule {
-	param([string]$name, [string]$path, [string]$account)
+	param([string]$name, [string]$path, [string]$account, [string]$level, [timespan]$limit)
 
 	Try {
 		$action = New-ScheduledTaskAction -Execute $path
 		$trigger = New-ScheduledTaskTrigger -AtLogOn
-		$principal = New-ScheduledTaskPrincipal -GroupId $account -RunLevel Limited
+		$principal = New-ScheduledTaskPrincipal -GroupId $account -RunLevel $level
 		# A sign-in script a laptop skips on battery is a sign-in script that
 		# runs at the desk and nowhere else: the two battery defaults of
 		# New-ScheduledTaskSettingsSet are turned off here on purpose
-		$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Hours 1)
+		$settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -MultipleInstances IgnoreNew -ExecutionTimeLimit $limit
 		Register-ScheduledTask -TaskName $name -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force -ErrorAction Stop | Out-Null
 	} Catch {
 		Write-Problem "WARNING" ("Register-ScheduledTask did not register the task: " + $_.Exception.Message) "Yellow"
@@ -156,7 +182,12 @@ function Register-WithSchtasks {
 	# The second way, and the reason nothing is left in taskschd.msc: the
 	# task is created for whoever is running this, then handed to the group
 	# by rewriting the definition schtasks exported and importing it back
-	param([string]$name, [string]$path, [string]$group)
+	param([string]$name, [string]$path, [string]$group, [string]$level, [string]$limit)
+
+	# The two words the task schema uses for what the module calls
+	# Highest and Limited
+	$runlevel = 'LeastPrivilege'
+	if ($level -eq 'Highest') { $runlevel = 'HighestAvailable' }
 
 	& schtasks.exe /create /tn $name /tr $path /sc onlogon /f | Out-Null
 	if ($LASTEXITCODE -ne 0) {
@@ -182,7 +213,7 @@ function Register-WithSchtasks {
 
 	# GroupId before RunLevel: the task schema wants them in that order,
 	# and LeastPrivilege is the unelevated run of -RunLevel Limited
-	$rewritten = '<Principal id="' + $id + '">' + "`r`n      <GroupId>" + $group + "</GroupId>`r`n      <RunLevel>LeastPrivilege</RunLevel>`r`n    </Principal>"
+	$rewritten = '<Principal id="' + $id + '">' + "`r`n      <GroupId>" + $group + "</GroupId>`r`n      <RunLevel>" + $runlevel + "</RunLevel>`r`n    </Principal>"
 	$text = $text.Replace($principal.Value, $rewritten)
 
 	# A logon trigger carries the account it was created for. Left there,
@@ -195,11 +226,11 @@ function Register-WithSchtasks {
 	# schtasks leaves the two battery defaults on, and the module path turns
 	# them off: a sign-in script a laptop skips when unplugged is a sign-in
 	# script that runs at the desk and nowhere else. The execution limit is
-	# brought to the hour of the module path too, in place of the three days
-	# schtasks writes. All three are always in an exported definition
+	# brought to the asked one too, in place of the three days schtasks
+	# writes. All three are always in an exported definition
 	$text = [regex]::Replace($text, '<DisallowStartIfOnBatteries>.*?</DisallowStartIfOnBatteries>', '<DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>')
 	$text = [regex]::Replace($text, '<StopIfGoingOnBatteries>.*?</StopIfGoingOnBatteries>', '<StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>')
-	$text = [regex]::Replace($text, '<ExecutionTimeLimit>.*?</ExecutionTimeLimit>', '<ExecutionTimeLimit>PT1H</ExecutionTimeLimit>')
+	$text = [regex]::Replace($text, '<ExecutionTimeLimit>.*?</ExecutionTimeLimit>', ('<ExecutionTimeLimit>' + $limit + '</ExecutionTimeLimit>'))
 
 	# Written back as UTF-16, which is what an exported definition declares
 	# and what schtasks /xml reads without complaining about the encoding
@@ -251,6 +282,7 @@ function Get-RegisteredTask {
 
 	$principal = $null
 	$run = $null
+	$level = $null
 
 	if (Get-Command Get-ScheduledTask -ErrorAction SilentlyContinue) {
 		# The name can exist in more than one folder of the scheduler, and a
@@ -259,6 +291,7 @@ function Get-RegisteredTask {
 		if (-not $task) { return $null }
 		$principal = $task.Principal.GroupId
 		if (-not $principal) { $principal = $task.Principal.UserId }
+		$level = $task.Principal.RunLevel
 		$action = @($task.Actions)[0]
 		if ($action) { $run = $action.Execute }
 	} else {
@@ -274,6 +307,9 @@ function Get-RegisteredTask {
 			} elseif ($user.Success) {
 				$principal = $user.Groups[1].Value.Trim()
 			}
+
+			$run_level = [regex]::Match($block.Value, '(?s)<RunLevel>(.*?)</RunLevel>')
+			if ($run_level.Success) { $level = $run_level.Groups[1].Value.Trim() }
 		}
 
 		$exec = [regex]::Match($text, '(?s)<Exec\b[^>]*>.*?<Command>(.*?)</Command>')
@@ -283,6 +319,7 @@ function Get-RegisteredTask {
 	$state = New-Object PSObject
 	$state | Add-Member NoteProperty Sid (Resolve-Sid $principal)
 	$state | Add-Member NoteProperty Command (Format-Command $run)
+	$state | Add-Member NoteProperty RunLevel (Resolve-RunLevel ([string]$level))
 	return $state
 }
 
@@ -306,6 +343,17 @@ if ($sid -notmatch '^(?i)S(-\d+)+$') {
 	exit 2
 }
 
+$span = $null
+Try {
+	$span = [System.Xml.XmlConvert]::ToTimeSpan($timelimit)
+} Catch {
+	Write-Problem "ERROR" ("-timelimit " + $timelimit + " is not an ISO 8601 duration: PT1H, PT4H, PT30M") "Red"
+	exit 2
+}
+
+$level = 'Limited'
+if ($elevated) { $level = 'Highest' }
+
 $account = $null
 Try {
 	$account = (New-Object System.Security.Principal.SecurityIdentifier($sid)).Translate([System.Security.Principal.NTAccount]).Value
@@ -322,7 +370,7 @@ Try {
 $existing = Get-RegisteredTask $taskname
 if ($existing) {
 	$wanted = Format-Command $command
-	$same = ($existing.Sid -eq $sid) -and ($existing.Command -ieq $wanted)
+	$same = ($existing.Sid -eq $sid) -and ($existing.Command -ieq $wanted) -and ($existing.RunLevel -eq $level)
 
 	if ($same -and -not $force) {
 		Write-Recipe ("'" + $taskname + "' is already registered for " + $account + " and runs " + $existing.Command + ": nothing was changed") "Green"
@@ -336,21 +384,21 @@ if ($existing) {
 		if ($existing.Sid) { $who = Resolve-Name $existing.Sid }
 		$what = 'a command that cannot be read'
 		if ($existing.Command) { $what = $existing.Command }
-		Write-Problem "WARNING" ("'" + $taskname + "' is already on this machine, runs " + $what + " for " + $who + ", and does not match what was asked: it is registered again") "Yellow"
+		Write-Problem "WARNING" ("'" + $taskname + "' is already on this machine, runs " + $what + " for " + $who + " at run level " + $existing.RunLevel + ", and does not match what was asked: it is registered again") "Yellow"
 	}
 }
 
 $registered = $false
 
 if (Get-Command Register-ScheduledTask -ErrorAction SilentlyContinue) {
-	$registered = Register-WithModule $taskname $command $account
+	$registered = Register-WithModule $taskname $command $account $level $span
 } else {
 	Write-Problem "WARNING" "the ScheduledTasks module is not available on this machine" "Yellow"
 }
 
 if (-not $registered) {
 	Write-Recipe ("Registering '" + $taskname + "' with schtasks instead, and handing it to " + $account) "Yellow"
-	$registered = Register-WithSchtasks $taskname $command $sid
+	$registered = Register-WithSchtasks $taskname $command $sid $level $timelimit
 }
 
 if (-not $registered) {
@@ -371,5 +419,12 @@ if ($read -ne $sid) {
 	exit 2
 }
 
-Write-Recipe ("'" + $taskname + "' runs " + $command + " at every sign-in of " + $account) "Green"
+if ($state.RunLevel -ne $level) {
+	Write-Problem "ERROR" ("the task '" + $taskname + "' runs at run level " + $state.RunLevel + " and not " + $level + ": what it runs would not have the rights it needs") "Red"
+	exit 2
+}
+
+$how = 'unelevated'
+if ($level -eq 'Highest') { $how = 'elevated' }
+Write-Recipe ("'" + $taskname + "' runs " + $command + " " + $how + " at every sign-in of " + $account) "Green"
 exit 0

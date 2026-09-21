@@ -33,7 +33,7 @@ Close cmd again: `cats` is now on the system PATH and can be called from any fol
 ## The cats command
 
 ```bash
-cats [install|update|prepare|create|deploy|clean] [parameters]
+cats [install|update|prepare|create|deploy|clean|resume] [parameters]
 ```
 
 Case is irrelevant, and the `Cats.` prefix of a recipe name is optional: `cats update Cats.Scripts`
@@ -48,6 +48,14 @@ in the dispatcher but are **not implemented**.
 | [`create`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-create) | Creates local users and the hardware identifier | `cats create Admin mario`, `cats create Machine` |
 | [`deploy`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-deploy) | Registers what has to keep running on the machine, and gets it ready for the tenant it joins | `cats deploy Userlogin`, `cats deploy Tenant365` |
 | [`clean`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-clean) | Disk cleanup, sfc, DISM, network reset, password reset, software removal | `cats clean disks`, `cats clean itadmin`, `cats clean Microsoft.Teams` |
+| [`resume`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-resume) | Carries a chain of steps across the restarts it needs | `cats resume`, `cats resume status`, `cats resume cancel` |
+
+A step that needs a restart before the next one can run does not restart the machine itself: it says
+so, and `cats resume` writes down what is left in `C:\Admin\Others\resume.state`, registers a
+scheduled task for the `Administrators` group and restarts. The next administrator to sign in picks
+the chain up without typing anything. `cats clean Wildcat` is built on it, and so are
+`cats install Drivers` and `cats update Windows`, which run again after the restart until they find
+nothing left to do.
 
 Passwords are never typed on the command line: `cats create`, `cats clean User` and
 `cats clean itadmin` ask for them, or generate a random one with the `random` keyword.
@@ -55,7 +63,7 @@ Passwords are never typed on the command line: `cats create`, `cats clean User` 
 ### Recipes
 
 `Acronis.Agent`, `Adobe.Acrobat.Reader`, `BgInfo`, `Cats.AdminFolders`, `Cats.Base`, `Cats.Scripts`,
-`Cats.Utils`, `Drivers`, `G360.Support`, `Google.GWSMO`, `HPSA9`, `LibreOffice`, `Machine`,
+`Cats.Utils`, `Cats.Wildcat`, `Drivers`, `G360.Support`, `Google.GWSMO`, `HPSA9`, `LibreOffice`, `Machine`,
 `Microsoft.Office`, `Microsoft.Teams`, `Nvidia`, `TeamViewerQS`, `Tenant365`, `User`, `Userlogin`,
 `WireGuard`. One page each in the
 [Recipes](https://github.com/iride-ch-SA/copycat-scripts/wiki/Recipes) index.

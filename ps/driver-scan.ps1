@@ -27,7 +27,11 @@
 #  working driver so there is nothing to do, 2 something failed
 #  and the reason is on the lines above, 3 devices need a driver
 #  and the library has nothing that fits them - that is the case
-#  where an operator has to go and fetch the package.
+#  where an operator has to go and fetch the package, 4 a driver
+#  was installed and pnputil asked for a restart before it is
+#  fully in charge. 4 is 0 with a restart pending, not a
+#  failure: it is what lets a caller chain the restart instead
+#  of leaving it to whoever reads the console.
 #
 #  pnputil /add-driver ... /install needs an elevated prompt and
 #  Windows 10 1607 or later.
@@ -269,8 +273,6 @@ try {
 	Write-Warn "the device state could not be read back: $($_.Exception.Message)"
 }
 
-if ($restart) { Write-Warn "a restart is needed before the new driver is fully in charge" }
-
 if ($failed -gt 0) {
 	Write-Fail "$failed driver package(s) failed to install"
 	exit 2
@@ -281,4 +283,12 @@ if ($installed -eq 0) {
 }
 
 Write-Recipe "$installed driver package(s) installed"
+
+# Asked after the failure and the nothing-installed cases, because a
+# restart pending on top of either of those says nothing useful
+if ($restart) {
+	Write-Warn "a restart is needed before the new driver is fully in charge"
+	exit 4
+}
+
 exit 0

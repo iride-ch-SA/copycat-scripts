@@ -24,6 +24,13 @@ rem
 rem    cats install Drivers
 rem    cats install Drivers check     report only, install nothing
 rem
+rem  A driver that asks for a restart before it is fully in
+rem  charge does not restart the machine here: cats-resume.bat is
+rem  told that a restart is needed, and the chain this recipe is
+rem  part of orders it once it has written down what is left. Run
+rem  by hand, outside a chain, nothing restarts and the machine
+rem  is left for the operator to restart.
+rem
 rem  Exit codes: 0 a driver was installed, 1 every device already
 rem  had a working driver, 2 an installation failed, 3 a device
 rem  needs a driver and the library has nothing that fits it.
@@ -47,6 +54,13 @@ if /I "%~1"=="install" (
 	powershell -noprofile -executionpolicy bypass -command "& C:\Admin\Scripts\ps\driver-scan.ps1 -Path '%DRV_DIR%' !DRV_ARGS!; exit $LASTEXITCODE"
 
 	rem errorlevel is greater-or-equal, so the codes are asked top down
+	if errorlevel 4 (
+		echo [36mRECIPE    : Drivers installed, and a restart is needed before they are fully in charge [0m
+		rem again: the devices this machine is still missing a driver for
+		rem can only be counted once the ones just installed are in charge
+		call C:\Admin\Scripts\cats-resume.bat request again
+		exit /b 0
+	)
 	if errorlevel 3 (
 		echo [33mWARNING   : A device needs a driver and %DRV_DIR% has nothing that fits it, see the lines above [0m
 		exit /b 3

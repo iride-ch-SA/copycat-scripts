@@ -4,19 +4,22 @@ echo [95mEXECUTING[96m : CopyCat Scripts[0m
 :: Check if there is a verb
 if "%~1"=="" (
 	echo [31mERROR     : You must specify a verb as first parameter [0m
-	echo [94mUSAGE     : cats install,uninstall,update,prepare,clean,set,create,deploy,backup parameters [0m
+	echo [94mUSAGE     : cats install,uninstall,update,prepare,clean,set,create,deploy,backup,resume parameters [0m
 	exit /b 2
 ) else (
 	echo [36mCALLING   : cats %~1 %2 %3 %4 %5 %6 %7 %8 %9 [0m
 )
 
-:: Check if enough parameters are passed
+:: Check if enough parameters are passed. resume is the one verb that
+:: takes none: cats resume picks up the chain the marker already holds
+if /I "%~1"=="resume" goto :verbs
 if "%~2"=="" (
 	echo [31mERROR     : You must specify at least one parameter for verb [91m%~1 [0m
 	echo [94mUSAGE     : cats %~1 package-names, recipe or shortcut [0m
 	exit /b 2
 )
 
+:verbs
 :: Accept winget source agreements on the first run of this user
 call C:\Admin\Scripts\cats-winget-accept.bat
 
@@ -51,6 +54,10 @@ if "%~1"=="create" (
 
 if "%~1"=="deploy" (
 	call C:\Admin\Scripts\cats-deploy.bat %2 %3 %4 %5 %6 %7 %8 %9
+)
+
+if /I "%~1"=="resume" (
+	call C:\Admin\Scripts\cats-resume.bat %2 %3 %4 %5 %6 %7 %8 %9
 )
 
 if "%~1"=="backup" (
