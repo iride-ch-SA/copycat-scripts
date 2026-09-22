@@ -58,6 +58,17 @@ for %%a in (%*) do (
 		powershell -noprofile -executionpolicy bypass -command "Get-NetConnectionProfile | Set-NetConnectionProfile -NetworkCategory Private"
 	)
 	
+	rem  The restart this needs is NOT ordered here: cats-resume.bat is
+	rem  told that one is needed and the chain this step belongs to -
+	rem  cats clean Machine is one - orders it once it has written down
+	rem  what is left to do. That is the convention every step of this
+	rem  repository follows, see cats-recipes\Drivers.bat. Typed by hand,
+	rem  outside a chain, nothing restarts and the machine is left for
+	rem  the operator to restart.
+	rem  Until 2026-09-22 this block ended with pause and shutdown /r /t 0:
+	rem  it asked for an operator to be standing there, and the restart it
+	rem  ordered itself took away both what followed on the command line
+	rem  and any chain this step was part of.
 	if /I "%%a"=="win-updates" (
 		echo [36mSHORTCUT  : Clean Windows Updates folder [0m
 		REM **** Clean Windows updates
@@ -66,9 +77,9 @@ for %%a in (%*) do (
 		del /f /s /q %windir%\SoftwareDistribution\*
 		net start wuauserv
 		net start bits
-		echo Restart is required by the script, presse enter to restart.
-		pause
-		shutdown /r /t 0 
+		echo [33mWARNING   : the Windows Update folder is emptied, and a restart is needed before it is built again [0m
+		echo [94mUSAGE     : restart this machine before it is used, or leave it to the chain this step is part of [0m
+		call "%CATS_HOME%\cats-resume.bat" request
 	)
 	
 	if /I "%%a"=="itadmin" (

@@ -61,15 +61,15 @@ in the dispatcher but are **not implemented**.
 | [`prepare`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-prepare) | Prepares folders, PATH, utilities, users and the machine name | `cats prepare AdminFolders`, `cats prepare WireGuard users`, `cats prepare Machine` |
 | [`create`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-create) | Creates local users and the hardware identifier | `cats create Admin mario`, `cats create Machine` |
 | [`deploy`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-deploy) | Registers what has to keep running on the machine, and gets it ready for the tenant it joins | `cats deploy Userlogin`, `cats deploy Tenant365` |
-| [`clean`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-clean) | Disk cleanup, logs and temporaries, sfc, DISM, network reset, password reset, software removal | `cats clean disks`, `cats clean tmp`, `cats clean itadmin`, `cats clean Microsoft.Teams` |
+| [`clean`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-clean) | Disk cleanup, logs and temporaries, sfc, DISM, network reset, password reset, software removal | `cats clean disks`, `cats clean tmp`, `cats clean Machine`, `cats clean itadmin`, `cats clean Microsoft.Teams` |
 | [`resume`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-resume) | Carries a chain of steps across the restarts it needs | `cats resume`, `cats resume status`, `cats resume cancel` |
 
 A step that needs a restart before the next one can run does not restart the machine itself: it says
 so, and `cats resume` writes down what is left in `C:\Admin\Others\resume.state`, registers a
 scheduled task for the `Administrators` group and restarts. The next administrator to sign in picks
-the chain up without typing anything. `cats clean Wildcat` is built on it, and so are
-`cats install Drivers` and `cats update Windows`, which run again after the restart until they find
-nothing left to do.
+the chain up without typing anything. `cats clean Wildcat` and `cats clean Machine` are built on it,
+and so are `cats install Drivers` and `cats update Windows`, which run again after the restart until
+they find nothing left to do.
 
 Passwords are never typed on the command line: `cats create`, `cats clean User` and
 `cats clean itadmin` ask for them, or generate a random one with the `random` keyword.
