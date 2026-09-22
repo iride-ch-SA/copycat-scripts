@@ -61,7 +61,7 @@ in the dispatcher but are **not implemented**.
 | [`prepare`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-prepare) | Prepares folders, PATH, utilities, users and the machine name | `cats prepare AdminFolders`, `cats prepare WireGuard users`, `cats prepare Machine` |
 | [`create`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-create) | Creates local users and the hardware identifier | `cats create Admin mario`, `cats create Machine` |
 | [`deploy`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-deploy) | Registers what has to keep running on the machine, and gets it ready for the tenant it joins | `cats deploy Userlogin`, `cats deploy Tenant365` |
-| [`clean`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-clean) | Disk cleanup, sfc, DISM, network reset, password reset, software removal | `cats clean disks`, `cats clean itadmin`, `cats clean Microsoft.Teams` |
+| [`clean`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-clean) | Disk cleanup, logs and temporaries, sfc, DISM, network reset, password reset, software removal | `cats clean disks`, `cats clean tmp`, `cats clean itadmin`, `cats clean Microsoft.Teams` |
 | [`resume`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-resume) | Carries a chain of steps across the restarts it needs | `cats resume`, `cats resume status`, `cats resume cancel` |
 
 A step that needs a restart before the next one can run does not restart the machine itself: it says
