@@ -98,6 +98,11 @@ if /I "%~1"=="status" (
 	exit /b !errorlevel!
 )
 
+if /I "%~1"=="rechain" (
+	call :rechain "%~2"
+	exit /b !errorlevel!
+)
+
 rem No verb, or "run": this is what the scheduled task invokes
 call :run
 exit /b !errorlevel!
@@ -319,6 +324,43 @@ rem  operator with notepad. The keys are read into RS_<KEY> and
 rem  not into <KEY>, because a marker holding PATH= would
 rem  otherwise rewrite the path of this process.
 rem ============================================================
+
+rem ============================================================
+rem  rechain writes a new list of steps over what is left of the
+rem  pending chain, and touches nothing else: the origin, the
+rem  cycle counter and the time the chain started stay as they
+rem  are, because this is the same chain and not a new one.
+rem  It exists because the chain is frozen into the marker when
+rem  it is opened: a machine whose installation was old at that
+rem  moment would walk the old list to the end, and a step added
+rem  to a recipe since would simply never run. A step of the
+rem  chain calls this after a restart, when the recipes have been
+rem  pulled and re-read - see cats clean Wildcat rechain.
+rem  The runner re-reads the marker before every step, so what is
+rem  written here is picked up by the next one.
+rem
+rem  Exit codes: 0 the rest of the chain was written, 1 no chain
+rem  is pending so there was nothing to write over, 2 no steps
+rem  were given or the marker could not be written.
+rem ============================================================
+
+:rechain
+if "%~1"=="" (
+	echo [31mERROR     : cats-resume rechain needs the steps to put in the marker [0m
+	exit /b 2
+)
+
+call :read
+if not defined RS_ORIGIN (
+	echo [33mWARNING   : no chain is pending on this machine, so there is nothing to write over [0m
+	exit /b 1
+)
+
+set "RS_CHAIN=%~1"
+call :write
+if errorlevel 1 exit /b 2
+echo [36mRECIPE    : the rest of chain "!RS_ORIGIN!" is now: !RS_CHAIN! [0m
+exit /b 0
 
 :read
 set "RS_ORIGIN="

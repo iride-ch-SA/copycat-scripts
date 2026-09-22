@@ -33,32 +33,34 @@ rem    3. cats update Scripts           - the newest recipes
 rem    4. cats clean Wildcat restart    - so that what follows
 rem       runs on those recipes and not on the ones this run
 rem       started with, see below
-rem    5. cats clean Wildcat virtio     - the Proxmox guest
+rem    5. cats clean Wildcat rechain    - the rest of the chain is
+rem       written again from the recipe step 3 pulled, see below
+rem    6. cats clean Wildcat virtio     - the Proxmox guest
 rem       software out, and its driver packages out of the store
-rem    6. cats prepare Drivers infpack yes - the vendor catalogue,
+rem    7. cats prepare Drivers infpack yes - the vendor catalogue,
 rem       one download, installed without asking
-rem    7. cats clean Wildcat gpu        - Intel DSA and NVIDIA, if
+rem    8. cats clean Wildcat gpu        - Intel DSA and NVIDIA, if
 rem       present. After the catalogue, not before: the pack
 rem       carries the Intel graphics driver, and Intel DSA has
 rem       less to find when it is already in
-rem    8. cats clean Wildcat restart    - the drivers just put in
+rem    9. cats clean Wildcat restart    - the drivers just put in
 rem       take charge, and what hangs off them is enumerated
-rem    9. cats install Drivers          - what that enumeration
+rem   10. cats install Drivers          - what that enumeration
 rem       brought with it
-rem   10. cats update Windows           - everything else, until
+rem   11. cats update Windows           - everything else, until
 rem       it finds nothing left
-rem   11. cats install Drivers          - once more: Windows
+rem   12. cats install Drivers          - once more: Windows
 rem       Update installs drivers of its own and brings devices
 rem       up with them, and a pass that finds nothing to do says
 rem       so and costs one enumeration
-rem   12. cats prepare Machine          - the random name, which
+rem   13. cats prepare Machine          - the random name, which
 rem       takes effect at the restart it asks for
-rem   13. cats create Machine           - the hardware identifier,
+rem   14. cats create Machine           - the hardware identifier,
 rem       taken after that last restart, on the machine as it
 rem       will be delivered
-rem   14. cats clean Wildcat background - the wallpaper, drawn on
+rem   15. cats clean Wildcat background - the wallpaper, drawn on
 rem       a machine that by now has its final name
-rem   15. cats clean Wildcat autologon off - the last act, always
+rem   16. cats clean Wildcat autologon off - the last act, always
 rem
 rem  THIS CHAIN ENDS ON ITS OWN. No step of it waits for anybody,
 rem  and nothing in it is a half of something an operator finishes
@@ -90,17 +92,38 @@ rem  wherever a chain stops being a chain - finished, cancelled or
 rem  stopped at the ceiling - so the guard is not in one place
 rem  only.
 rem
-rem  Step 3 is not a formality. A run of cats reads its .bat
-rem  files from a copy under %TEMP% - see cats-shadow.bat - and
-rem  the copy is made once, by the process that opens the chain:
-rem  every step of that chain reads the recipes as they were
-rem  BEFORE step 2 pulled. Only a restart ends that process, and
-rem  the scheduled task then starts cats-resume.bat afresh, which
-rem  copies the installation again. Without step 3, step 2
-rem  updates the disk and changes nothing about the run that
-rem  asked for it.
+rem  Steps 4 and 5 are what make step 3 count, and they are two
+rem  different problems.
 rem
-rem  Step 6 wants a network, which is why it is not first, and it
+rem  The restart is about the RECIPES. A run of cats reads its
+rem  .bat files from a copy under %TEMP% - see cats-shadow.bat -
+rem  and the copy is made once, by the process that opens the
+rem  chain: every step reads the recipes as they were BEFORE step
+rem  3 pulled. Only a restart ends that process, and the
+rem  scheduled task then starts cats-resume.bat afresh, which
+rem  copies the installation again.
+rem
+rem  rechain is about the CHAIN ITSELF, which is a different
+rem  thing and is not fixed by a restart. The list of steps is
+rem  written into the marker WHOLE when the chain is opened, so a
+rem  machine whose C:\Admin\Scripts was old at that moment walks
+rem  the old list to the end - a step added to this recipe simply
+rem  never runs, and nothing says so. rechain hands cats-resume
+rem  the tail of the chain as THIS file has it, read after the
+rem  restart from the installation step 3 pulled, and cats-resume
+rem  writes it over what is left in the marker. Which is why the
+rem  chain is declared below in two halves: WC_HEAD is what must
+rem  run with the code the machine started with - the network
+rem  card, the pull, the restart - and WC_TAIL is what rechain
+rem  replaces itself with. The two are the same chain.
+rem
+rem  And before any of it, opening the chain pulls and starts
+rem  itself again once, so that the list written into the marker
+rem  comes from the current recipe whenever this machine has a
+rem  network. When it has none the pull fails, the chain opens on
+rem  the code that is there, and step 5 catches up later.
+rem
+rem  Step 7 wants a network, which is why it is not first, and it
 rem  is the form with one download: the family INF pack instead
 rem  of a dozen single packages. On a board that is not an ASUS
 rem  NUC the step says so and the chain carries on - a step that
@@ -115,11 +138,14 @@ rem
 rem    cats clean Wildcat virtio      one step alone
 rem    cats clean Wildcat gpu         one step alone
 rem    cats clean Wildcat restart     ask for a restart and nothing else
+rem    cats clean Wildcat rechain     rewrite the rest of the chain from this file
 rem    cats clean Wildcat background  the wallpaper, and nothing else
 rem    cats clean Wildcat autologon on|off   the automatic logon
 rem ============================================================
 
-set WC_CHAIN=clean Wildcat autologon on+install Drivers+update Scripts+clean Wildcat restart+clean Wildcat virtio+prepare Drivers infpack yes+clean Wildcat gpu+clean Wildcat restart+install Drivers+update Windows+install Drivers+prepare Machine+create Machine+clean Wildcat background+clean Wildcat autologon off
+set WC_HEAD=clean Wildcat autologon on+install Drivers+update Scripts+clean Wildcat restart+clean Wildcat rechain
+set WC_TAIL=clean Wildcat virtio+prepare Drivers infpack yes+clean Wildcat gpu+clean Wildcat restart+install Drivers+update Windows+install Drivers+prepare Machine+create Machine+clean Wildcat background+clean Wildcat autologon off
+set WC_CHAIN=%WC_HEAD%+%WC_TAIL%
 
 if /I "%~1"=="clean" (
 
@@ -170,6 +196,22 @@ if /I "%~1"=="clean" (
 		echo [36mRECIPE    : A restart here, so that what follows runs on the machine the steps above left [0m
 		call "%CATS_HOME%\cats-resume.bat" request
 		exit /b !errorlevel!
+	)
+
+	if /I "%~2"=="rechain" (
+		rem  The chain was written into the marker whole when it was opened, from
+		rem  the recipe as it was on the disk THEN. This step hands cats-resume the
+		rem  tail as this file has it now - read after a restart, from the
+		rem  installation the pull updated - and what is left in the marker is
+		rem  written over. Same chain when nothing changed, which is the ordinary
+		rem  case and costs a line of console
+		echo [36mRECIPE    : Writing the rest of the chain again, from the recipes this machine has now [0m
+		call "%CATS_HOME%\cats-resume.bat" rechain "%WC_TAIL%"
+		if errorlevel 2 (
+			echo [33mWARNING   : the chain was left as it was, the lines above say why [0m
+			exit /b 0
+		)
+		exit /b 0
 	)
 
 	if /I "%~2"=="background" (
@@ -235,8 +277,23 @@ if /I "%~1"=="clean" (
 
 	if not "%~2"=="" (
 		echo [31mERROR     : Wildcat has no step called %~2 [0m
-		echo [94mUSAGE     : cats clean Wildcat, or one step of it: virtio, gpu, restart, background, autologon [0m
+		echo [94mUSAGE     : cats clean Wildcat, or one step of it: virtio, gpu, restart, rechain, background, autologon [0m
 		exit /b 2
+	)
+
+	rem  The list of steps is frozen into the marker the moment the chain opens, so
+	rem  it is pulled first and this run starts again from the installation the pull
+	rem  updated. Once only, and the guard is an environment variable the second run
+	rem  inherits. A machine with no network yet - the card is itself one of the
+	rem  drivers step 2 installs - fails the pull, opens the chain on the code it has,
+	rem  and step 5 rewrites the tail after the restart
+	if not defined WC_REFRESHED (
+		set "WC_REFRESHED=yes"
+		echo [36mRECIPE    : Pulling the recipes before the chain is written down [0m
+		call "%CATS_HOME%\cats-update.bat" Scripts
+		set "CATS_HOME="
+		call "%CATS_ROOT%\cats.bat" clean Wildcat
+		exit /b !errorlevel!
 	)
 
 	echo [36mRECIPE    : Turning this machine into a Wild Cat: %WC_CHAIN% [0m
