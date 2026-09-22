@@ -90,6 +90,18 @@ rem  machine needs - must not take the restart away and end the
 rem  chain with a device short. What failed is named on the
 rem  console either way.
 rem
+rem  cats clean Drivers empties the library: everything under
+rem  C:\Admin\Drivers goes, the folder itself stays, because the
+rem  other driver recipes write into it. The drivers already in
+rem  the driver store are not touched - pnputil copied them there,
+rem  and what is removed is only the packages they came from.
+rem
+rem    cats clean Drivers           empty the library
+rem    cats clean Drivers list      what it would remove, nothing removed
+rem
+rem  Exit codes of clean: 0 the library was emptied, 1 there was
+rem  nothing in it, 2 something could not be removed.
+rem
 rem  Exit codes: 0 a driver was installed, 1 every device already
 rem  had a working driver, 2 an installation failed, 3 a device
 rem  needs a driver and the library has nothing that fits it.
@@ -188,6 +200,54 @@ if /I "%~1"=="prepare" (
 
 	call "%CATS_HOME%\cats-recipes\Drivers.bat" install
 	exit /b !errorlevel!
+)
+
+if /I "%~1"=="clean" (
+
+	if /I "%~2"=="list" (
+		echo [36mRECIPE    : What a clean would take out of %DRV_DIR% [0m
+		if exist "%DRV_DIR%\" dir /b /a "%DRV_DIR%"
+		exit /b 0
+	)
+
+	if not exist "%DRV_DIR%\" (
+		echo [36mRECIPE    : Nothing to clean: %DRV_DIR% does not exist [0m
+		exit /b 1
+	)
+	rem  findstr "^" matches any line, so it fails only when dir listed nothing:
+	rem  a test on the listing itself, whatever language the machine speaks
+	dir /b /a "%DRV_DIR%" 2>nul | findstr "^" >nul
+	if errorlevel 1 (
+		echo [36mRECIPE    : Nothing to clean: %DRV_DIR% is already empty [0m
+		exit /b 1
+	)
+
+	echo [36mRECIPE    : Emptying %DRV_DIR%, the folder itself stays [0m
+	rem  dir /a, not for /d: for /d skips the hidden folders
+	for /f "delims=" %%e in ('dir /b /a:d "%DRV_DIR%" 2^>nul') do rmdir /s /q "%DRV_DIR%\%%e" >nul 2>&1
+	del /f /q /a "%DRV_DIR%\*" >nul 2>&1
+
+	rem  A vendor package can hold paths longer than 260 characters - the Intel
+	rem  DTT one does, see the Implementation note of the wiki - and rmdir may
+	rem  stop on those. robocopy is not bound by that limit: mirroring an empty
+	rem  folder onto the library purges whatever rmdir left behind
+	dir /b /a "%DRV_DIR%" 2>nul | findstr "^" >nul
+	if not errorlevel 1 (
+		if exist "%DRV_DIR%.empty" rmdir /s /q "%DRV_DIR%.empty" >nul 2>&1
+		mkdir "%DRV_DIR%.empty" >nul 2>&1
+		robocopy "%DRV_DIR%.empty" "%DRV_DIR%" /mir /r:1 /w:1 /njh /njs /ndl /nfl /nc /ns /np >nul 2>&1
+		rmdir /s /q "%DRV_DIR%.empty" >nul 2>&1
+	)
+
+	dir /b /a "%DRV_DIR%" 2>nul | findstr "^" >nul
+	if not errorlevel 1 (
+		echo [31mERROR     : Something in %DRV_DIR% could not be removed, most likely a file in use: [0m
+		dir /b /a "%DRV_DIR%"
+		exit /b 2
+	)
+
+	echo [92mDONE     [96m : %DRV_DIR% is empty[0m
+	exit /b 0
 )
 
 exit /b 2
