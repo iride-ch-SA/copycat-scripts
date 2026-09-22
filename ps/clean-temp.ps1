@@ -210,16 +210,44 @@ if (Test-Path -LiteralPath $UsersDir) {
 
 # ---- 4. The event logs ----
 
+# Only the channels that actually hold something are cleared. wevtutil el lists every
+# channel REGISTERED on the machine - about 1200 on a Windows 11 - and clearing an empty
+# one succeeds, so a sweep of the whole list reported the same 1202 and 1200 on a machine
+# that had just been swept as on one that had never been: the number was a property of
+# Windows, not of the state of this machine, and it said nothing. Measured 2026-09-22 on a
+# machine in deployment, reported by the operator: same figures on two runs in a row.
+# Get-WinEvent -ListLog answers the record count of every channel in ONE call, so the
+# channels that hold nothing are skipped: on a machine just installed that is some fifty
+# clears instead of twelve hundred, and the figure on the console is the number of logs
+# that really had something in them.
 $logsCleared = 0
 $logsLeft = 0
 if ($live -and $onWindows -and (Get-Command wevtutil.exe -ErrorAction SilentlyContinue)) {
-	$names = @(& wevtutil.exe el 2>$null)
-	if ($List) {
-		Write-Recipe ("Event logs a clean would clear: " + $names.Count)
+	$full = @()
+	$counted = $false
+	if (Get-Command Get-WinEvent -ErrorAction SilentlyContinue) {
+		foreach ($channel in @(Get-WinEvent -ListLog * -ErrorAction SilentlyContinue)) {
+			$count = 0
+			try { if ($null -ne $channel.RecordCount) { $count = [int]$channel.RecordCount } } catch { }
+			if ($count -gt 0) { $full += [string]$channel.LogName }
+		}
+		$counted = $true
 	} else {
-		Write-Recipe ("Clearing " + $names.Count + " event logs")
-		foreach ($name in $names) {
-			if ($name -eq '') { continue }
+		# Without Get-WinEvent there is no record count to read, so the old sweep of the
+		# whole list is the only thing left - and the console must not claim a number it
+		# did not measure
+		$full = @(& wevtutil.exe el 2>$null | Where-Object { $_ -ne '' })
+		$counted = $false
+	}
+
+	$what = if ($counted) { " event log(s) that hold records" } else { " event log(s), record counts not readable on this build" }
+	if ($full.Count -eq 0) {
+		Write-Recipe "No event log holds any record, nothing to clear there"
+	} elseif ($List) {
+		Write-Recipe ("A clean would empty " + $full.Count + $what)
+	} else {
+		Write-Recipe ("Clearing " + $full.Count + $what)
+		foreach ($name in $full) {
 			& wevtutil.exe cl "$name" 2>$null
 			# analytic and debug logs refuse to be cleared while enabled, and
 			# that is not a fault of this run
@@ -250,7 +278,7 @@ if ($script:visited -eq 0) {
 
 if ($List) {
 	Write-Recipe ("A clean would free about " + (Format-Size $script:freed))
-	if ($script:kept -gt 0) { Write-Recipe "The running copy of cats under the temporary folder is left in place" }
+	if ($script:kept -gt 0) { Write-Recipe ("Left where it is: " + $keepFull + ", which is the copy this very run is reading its own .bat files from") }
 	if ($script:freed -eq 0) { exit 1 }
 	exit 0
 }
@@ -258,7 +286,14 @@ if ($List) {
 Write-Recipe ("Freed " + (Format-Size $script:freed))
 if ($logsCleared -gt 0) { Write-Recipe ("Event logs cleared: " + $logsCleared) }
 if ($logsLeft -gt 0)    { Write-Warn ("Event logs that refused to be cleared, analytic and debug ones among them: " + $logsLeft) }
-if ($script:kept -gt 0) { Write-Recipe "The running copy of cats under the temporary folder was left in place" }
+# Named with its path, and said for what it is. It reads as a leftover otherwise, and it is
+# the opposite: everything else under the temporary folder went, including the shadow copies
+# of the earlier runs, and the one folder that stayed is the one this command is standing on.
+# cats-shadow.bat made it when the command started and removes the ones older than a day.
+if ($script:kept -gt 0) {
+	Write-Recipe ("Left where it is: " + $keepFull)
+	Write-Recipe "that folder is the copy this very run is reading its own .bat files from, made when the command started - not a leftover of an earlier one"
+}
 if ($script:stuck -gt 0) {
 	Write-Warn ($script:stuck.ToString() + " items are in use and stay where they are: they belong to a running program, and a clean after a restart takes them")
 }
