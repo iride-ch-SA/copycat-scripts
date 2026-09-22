@@ -40,10 +40,8 @@ $script:InfIdPattern = '(?i)\b(?:PCI|USB|USBPRINT|HID|ACPI|HDAUDIO|INTELAUDIO|SW
 # compatible ids under it, and the last rung of the PCI one is the vendor by itself. PCI\VEN_8086
 # sits on every Intel device of the board, and every .inf that names any Intel part begins with
 # those same twelve characters - so an id that stops at the vendor, or at the device class,
-# matches everything and therefore says nothing.
-# Measured 2026-09-21 on a NUC15CRBC5: with these ids kept in the match, 442 of the 477 .inf
-# files in the library were reported as fitting the same four devices - the x86 chipset packages
-# among them - and pnputil was handed every single one of them.
+# matches everything and therefore says nothing. Kept in the match, they make every package of a
+# vendor fit every device of that vendor.
 $script:GenericIdPatterns = @(
 	'^PCI\\VEN_[0-9A-F]{4}$',
 	'^PCI\\VEN_[0-9A-F]{4}&CC_[0-9A-F]{4,6}$',
@@ -125,12 +123,8 @@ function Get-InfDecorations([string]$text) {
 
 # An extension .inf does not install a device, it adds settings on top of the package that does:
 # Class=Extension, its own ClassGuid, and an ExtensionId. Windows stages it and even reports it as
-# updated on the device - and the device stays without a driver, because an extension has none to
-# give. Measured 2026-09-22 on a NUC15CRBC5: HdBusExt.inf of the Intel graphics package claims
-# PCI\VEN_8086&DEV_51CA, which is that board's multimedia audio controller, so it was the only
-# thing in the library claiming that device; pnputil answered "driver package updated on device,
-# 0 added" and the device stayed at problem 28. The base driver of that part, IntcAudioBus.inf,
-# was in the family INF pack that nobody had fetched - because the device counted as claimed.
+# updated on the device, and the device stays without a driver, because an extension has none to
+# give. A device claimed by an extension alone is therefore a device nothing can serve.
 function Test-InfIsExtension([string]$text) {
     if ($text -match '(?im)^\s*ExtensionId\s*=') { return $true }
     if ($text -match '(?im)^\s*Class\s*=\s*Extension\b') { return $true }
@@ -152,10 +146,9 @@ function Get-HostArchitecture {
 	}
 }
 
-# The library is read once per file and kept: cats install Drivers now walks it several times in
-# one run - a bus driver in charge enumerates children that were not there a minute earlier - and
-# the library does not change between those passes. A thousand .inf files re-read four times is
-# the kind of cost nobody sees until a posa waits for it.
+# The library is read once per file and kept: cats install Drivers walks it several times in one
+# run - a bus driver in charge enumerates children that were not there a minute earlier - and the
+# library does not change between those passes.
 $script:InfFactsCache = @{}
 
 function Get-InfFacts([string]$file) {
@@ -238,8 +231,7 @@ function Get-DriverMatches {
 		if (-not $facts.Read) { $result.Unreadable++; continue }
 		if ($facts.Ids.Count -eq 0) { continue }
 		# A package for another architecture is staged by pnputil without a complaint and serves
-		# no device here: the x86 copy of the Intel chipset pack was installed on an x64 machine
-		# on 2026-09-21 for want of this test
+		# no device here, so it is not offered to it
 		if (-not (Test-InfFitsArchitecture $facts $Architecture)) { $result.OtherArchitecture++; continue }
 
 		$matched = @()

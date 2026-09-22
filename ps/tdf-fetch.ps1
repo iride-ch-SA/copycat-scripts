@@ -3,26 +3,18 @@
 # Prints KEY=VALUE lines on standard output and nothing else, like the lookup scripts: the caller
 # is a batch recipe that parses them with for /f - see cats-recipes\LibreOffice.bat.
 #
-# Why this exists rather than a plain WebClient call, which is what every other recipe in this
-# repository uses. On 2026-08-27 the first field run of `cats install LibreOffice` failed at the
-# download with «The underlying connection was closed: An unexpected error occurred on a send»:
-# download.documentfoundation.org, the official mirror redirector, killed the connection. The same
-# host had already refused the agent's own machine the same day - connection reset, on curl and on
-# .NET alike, while www.libreoffice.org, wiki.documentfoundation.org and four direct TDF mirrors
-# answered normally in the same minute. Two machines, two operating systems, two TLS stacks, one
-# host: the redirector is the part that fails, not the download and not the network. Every other
-# recipe here downloads from a vendor host that has never done this, so the fix belongs to the TDF
-# packages and not to the other recipes.
+# Several sources rather than one. The official path is the mirror redirector
+# download.documentfoundation.org, which picks a mirror near the machine and is therefore tried
+# first; it is also a host that closes the connection on some networks, this fleet's included, so
+# its failure is not the end of the download: the sources below are tried in turn until one serves
+# the file. Every other recipe of this repository downloads from a single vendor host, and needs
+# none of this.
 #
-# What that buys, and what it costs. The redirector is still tried first - it is the official path
-# and it picks a mirror near the machine, which on a client network is the right thing - but its
-# failure is no longer the end of the recipe: the sources below are tried in turn until one serves
-# the file. The cost is that the bytes may come from a third party instead of from TDF's own
-# redirect, which is why this script verifies the Authenticode signature of what it downloaded
-# before letting the caller install it. Verified on the 26.8.0 x86-64 MSI, 2026-08-27: signed by
-# «The Document Foundation», issued by Certum Code Signing 2021 CA, countersigned for time. TDF
-# publishes no .sha256 next to the packages - only a .asc, which needs a GnuPG that a Wild Cat
-# does not have - so the signature already in the file is the check that costs nothing.
+# The bytes may then come from a third party rather than from TDF's own redirect, so this script
+# verifies the Authenticode signature of what it downloaded before the caller installs it: the
+# packages are signed by «The Document Foundation», issued by Certum Code Signing 2021 CA and
+# countersigned for time. TDF publishes no .sha256 next to them - only a .asc, which needs a GnuPG
+# a Wild Cat does not have - so the signature already in the file is the check that costs nothing.
 #
 #   ps\tdf-fetch.ps1 -Path stable/26.8.0/win/x86_64 -File LibreOffice_26.8.0_Win_x86-64.msi -Out ...
 #   ps\tdf-fetch.ps1 ... -Optional        a 404 on every source is MISSING=1, not an error
@@ -39,8 +31,8 @@ $ErrorActionPreference = 'Stop'
 
 # In order of preference. The redirector first: official, and it resolves to a mirror close to the
 # machine, which matters on a client line and cannot be reproduced by a fixed list. Then four
-# direct mirrors, all verified to carry the full Windows tree - x86_64, aarch64 and the helppacks -
-# at the path below on 2026-08-27. init7 is second because the fleet is in Switzerland and so is
+# direct mirrors, all carrying the full Windows tree - x86_64, aarch64 and the helppacks - at the
+# path below. init7 is second because the fleet is in Switzerland and so is
 # init7; the others are there so that one mirror's maintenance is not an outage.
 $Sources = @(
 	@{ Name = 'documentfoundation.org'; Base = 'https://download.documentfoundation.org/libreoffice' },
@@ -52,8 +44,8 @@ $Sources = @(
 
 # Written straight to the console stream and not with Write-Output, because the functions below
 # emit *and* return a value: a Write-Output inside one of them joins its return value, so
-# `return $false` after an Emit comes back as a two-element array - which is truthy, and would have
-# made a hash mismatch pass the check. Found by running the error paths, 2026-08-27.
+# `return $false` after an Emit comes back as a two-element array - which is truthy, and makes a
+# hash mismatch pass the check.
 function Emit([string] $key, [string] $value) {
 	# Formatted on its own line: inside a .NET method call the comma separates arguments, so
 	# WriteLine('{0}={1}' -f $key, $value) is parsed as two arguments and the format runs out of
@@ -101,9 +93,9 @@ function Test-TdfSignature([string] $file) {
 	return $true
 }
 
-# The HTTP status out of curl's own --write-out, and not curl's exit code. Measured on 2026-08-27:
-# curl 8.7 with --fail over HTTP/2 - which every one of these mirrors speaks - reports a 404 as
-# exit 56, «failure receiving network data», not as the 22 that --fail documents. Exit 56 is also
+# The HTTP status out of curl's own --write-out, and not curl's exit code: curl 8.7 with --fail
+# over HTTP/2 - which every one of these mirrors speaks - reports a 404 as exit 56, «failure
+# receiving network data», and not as the 22 that --fail documents. Exit 56 is also
 # what a genuinely broken connection gives, so reading the exit code alone would file «this mirror
 # does not carry the helppack» under «the network is down», and a missing help pack would abort the
 # recipe. --write-out prints the status even when the transfer failed.
@@ -115,8 +107,8 @@ function Get-CurlStatus($output) {
 
 # ErrorActionPreference goes back to Continue around every native call: with it on Stop, a command
 # that writes to stderr under 2>&1 raises NativeCommandError and the script dies on the first
-# mirror that prints a diagnostic. Keeping stderr is worth the two lines - it is what tells the
-# operator why a mirror refused.
+# mirror that prints a diagnostic. stderr is kept because it is what tells the operator why a
+# mirror refused.
 function Invoke-Curl([string] $curl, [string[]] $curlArgs) {
 	$prev = $ErrorActionPreference
 	$ErrorActionPreference = 'Continue'
@@ -126,10 +118,9 @@ function Invoke-Curl([string] $curl, [string[]] $curlArgs) {
 	return @{ Code = $code; Text = $text; Status = (Get-CurlStatus $text) }
 }
 
-# One byte, twenty seconds, before committing to 375 MB. Not caution for its own sake: the
-# redirector does not only reset, it can also accept the connection and then never answer, and
-# measured on 2026-08-27 that cost 123 s on the first source alone - --connect-timeout does not
-# cover a stall after the connection is up, and --max-time cannot be used on the real transfer
+# One byte, twenty seconds, before committing to 375 MB. A source does not only refuse, it can
+# also accept the connection and then never answer, which costs the run two minutes on that source
+# alone: --connect-timeout does not cover a stall after the connection is up, and --max-time cannot be used on the real transfer
 # without capping a legitimate slow download of a 375 MB package. A ranged GET bounds the wait for
 # the first byte, which is the only thing that needs bounding, and it settles 404 cheaply as well:
 # a mirror that does not carry the file says so without anyone downloading anything.

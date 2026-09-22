@@ -16,14 +16,13 @@ if /I "%~1"=="update" (
 	if /I "%~2"=="reset" (
 		echo [32mRECIPE    : Reset CopyCat Scripts from GIT [0m
 
-		rem  The clone comes first, and into a folder of its own. Since the
-		rem  shadow copy the run no longer reads out of CATS_ROOT, so the
-		rem  rmdir below really does empty it - it used to fail on the .bat
-		rem  files being read and leave the tree half standing. A clone that
-		rem  failed after such an rmdir - no network, no git, no credentials -
-		rem  would leave the machine with no cats at all: nothing on the
-		rem  system PATH and no command for the resume task. So the old tree
-		rem  goes only once the new one is on disk and has a cats.bat in it.
+		rem  The clone comes first, and into a folder of its own. The run
+		rem  reads out of the shadow copy and not out of CATS_ROOT, so the
+		rem  rmdir below really does empty it. A clone that failed after such
+		rem  an rmdir - no network, no git, no credentials - would leave the
+		rem  machine with no cats at all: nothing on the system PATH and no
+		rem  command for the resume task. So the tree in place goes only once
+		rem  the new one is on disk and has a cats.bat in it.
 		if exist "%CATS_ROOT%.new" rmdir /s /q "%CATS_ROOT%.new"
 		git clone https://github.com/iride-ch-SA/copycat-scripts.git "%CATS_ROOT%.new"
 		if not exist "%CATS_ROOT%.new\cats.bat" (

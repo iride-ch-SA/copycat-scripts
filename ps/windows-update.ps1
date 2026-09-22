@@ -4,8 +4,8 @@ param(
 	[switch]$quiet
 )
 
-# An unhandled error used to leave the caller with a bare exit code and no reason to
-# read. Every helper of this repository answers the same way since 2026-09-22.
+# An unhandled error is named on the console, with the line it came from, before the
+# exit code reaches the caller. Every helper of this repository answers the same way.
 trap {
 	Write-Host ("ERROR     : windows-update failed: " + $_.Exception.Message + " [line " + $_.InvocationInfo.ScriptLineNumber + "]") -ForegroundColor Red
 	exit 2
@@ -120,10 +120,10 @@ if ($check) {
 	exit 1
 }
 
-# -IgnoreReboot, and not the -AutoReboot this recipe used to pass:
-# the restart is ordered by the chain, which writes down what is
-# still to do first. A machine restarted from underneath the caller
-# loses the step that comes after it
+# -IgnoreReboot, and not -AutoReboot: the restart is ordered by the
+# chain, which writes down what is still to do first. A machine
+# restarted from underneath the caller loses the step that comes
+# after it
 Try {
 	Get-WindowsUpdate -Install -AcceptAll -IgnoreReboot -ErrorAction Stop | Out-Null
 } Catch {

@@ -23,13 +23,10 @@
 #
 #  An EXTENSION .inf claims a device without being able to serve
 #  it - it adds settings on top of the package that installs the
-#  driver - so it is installed when it matches but never counted
-#  as covering anything. Measured 2026-09-22: HdBusExt.inf of the
-#  Intel graphics package claims PCI\VEN_8086&DEV_51CA, the
-#  multimedia audio controller of a NUC15CRBC5, and was the only
-#  thing in the library claiming it. pnputil staged it, said
-#  "driver package updated on device, 0 added", and the device
-#  stayed at problem 28 while the fetch went home satisfied.
+#  driver - so it is installed when it matches and never counted
+#  as covering anything. pnputil stages it and answers "driver
+#  package updated on device, 0 added", which reads like success
+#  while the device stays at problem 28.
 #
 #  Parameters:
 #    -Path <folder>  the driver library, C:\Admin\Drivers by
@@ -48,35 +45,23 @@
 #  4 a driver was installed and pnputil asked for a restart
 #  before it is fully in charge.
 #
-#  4 is asked BEFORE 2 and 3 on purpose. A restart pending is not
-#  a verdict on the run, it is a statement that the run is not
-#  over: the devices that are still unclaimed cannot be counted
-#  while three chipset packages are waiting for a restart to take
-#  charge, and a package that could not be installed at all does
-#  not change that. Until 2026-09-21 the failure was asked first,
-#  and three packages signed with an expired certificate - none
-#  of them a driver for any device of the machine - were enough
-#  to swallow the restart request and end the chain.
+#  4 is asked BEFORE 2 and 3, and must stay that way. A restart
+#  pending says the run is not over: the devices still unclaimed
+#  cannot be counted while a package waits for a restart to take
+#  charge, and a package that could not be installed does not
+#  change that. What failed is named on the console either way.
 #
-#  SEVERAL PASSES, not one. A driver in charge changes what the
-#  machine is: a bus - SerialIO, SMBus, the audio controller,
-#  the CNVi radio - enumerates its children only once its own
-#  driver runs, so devices appear during the run that were not
-#  there when it started, and a scan that looks once never sees
-#  them. Measured 2026-09-22 on a NUC15CRBC5: the run ended with
-#  "1 of 1 device(s) are working now" and a Bluetooth device
-#  turned up afterwards whose driver was already in the library,
-#  never staged, because nothing had claimed it at the one
-#  moment the machine was looked at. So the scan repeats -
-#  enumerate, match, install what has not been tried yet - until
-#  a pass finds nothing new to install, with a ceiling of
-#  -Rounds passes. It is the same reasoning as cats update
-#  Windows going round until it finds nothing left, and it costs
-#  one enumeration per pass: the .inf files are read once and
-#  kept. Every pass after the first waits -SettleSeconds before
-#  looking, because Plug and Play does not bring the children of
-#  a driver up while pnputil is still speaking: a pass that asks
-#  the instant the call returns asks too early.
+#  SEVERAL PASSES, not one. A bus - SerialIO, SMBus, the audio
+#  controller, the CNVi radio - enumerates its children only once
+#  its own driver runs, so devices appear during the run that
+#  were not there when it started, and a scan that looks once
+#  never sees them. So the scan repeats - enumerate, match,
+#  install what has not been tried yet - until a pass finds
+#  nothing new to install, with a ceiling of -Rounds passes. It
+#  costs one enumeration per pass: the .inf files are read once
+#  and kept. Every pass after the first waits -SettleSeconds
+#  before looking, because Plug and Play does not bring the
+#  children of a driver up while pnputil is still speaking.
 #
 #  A restart is a different matter and keeps its own path: what
 #  needs one cannot be seen in this run at all, so pnputil
@@ -132,12 +117,11 @@ $notADriverProblem = @(21, 22, 24, 25, 26, 27, 29, 45, 47, 54)
 # package to the store, which on a second pass is every package that was already staged by the
 # first one, not "no device wanted it": the same call prints "Driver package updated on device"
 # above the line it returns 259 on.
-# 0x800B0101 is CERT_E_EXPIRED. It is a package Windows will not stage at all, and no run of
-# this recipe can change that: the only way in would be to turn the signature enforcement of
-# the machine off, which is not something a posa does. The three packages that met it on
-# 2026-09-21 were an Intel DTT user interface marked "DO NOT DISTRIBUTE" and two copies of a
-# Wi-Fi special config that disables 802.11be - not a driver for any device on the board - so it
-# is named and stepped over instead of failing the run. Every other trust error stays a failure.
+# 0x800B0101 is CERT_E_EXPIRED: a package Windows will not stage at all, and no run of this
+# recipe can change that - the only way in would be to turn the signature enforcement of the
+# machine off. Vendor packages carry such files, user interfaces and optional configurations
+# rather than drivers, so it is named and stepped over instead of failing the run. Every other
+# trust error stays a failure.
 $PNPUTIL_RESTART_NEEDED = 3010
 $PNPUTIL_NOTHING_ADDED = 259
 $CERT_E_EXPIRED = -2146762495

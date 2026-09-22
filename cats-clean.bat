@@ -83,10 +83,6 @@ for %%a in (%*) do (
 	rem  repository follows, see cats-recipes\Drivers.bat. Typed by hand,
 	rem  outside a chain, nothing restarts and the machine is left for
 	rem  the operator to restart.
-	rem  Until 2026-09-22 this block ended with pause and shutdown /r /t 0:
-	rem  it asked for an operator to be standing there, and the restart it
-	rem  ordered itself took away both what followed on the command line
-	rem  and any chain this step was part of.
 	if /I "%%a"=="win-updates" (
 		echo [36mSHORTCUT  : Clean Windows Updates folder [0m
 		REM **** Clean Windows updates

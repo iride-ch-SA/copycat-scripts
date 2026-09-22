@@ -8,11 +8,10 @@ echo [95mSTARTING [96m : CopyCat Install[0m
 
 rem  A recipe recognised on this command line takes the words that follow it: they are
 rem  its arguments and the recipe was already handed all of them, so they must not be
-rem  offered to winget as package ids of their own. cats install Drivers check asked for
-rem  a check of the Drivers recipe and used to ask winget for a package called "check"
-rem  as well - harmless only because cats-install-winget.bat installs nothing unless the
-rem  search returns exactly one match. Several packages on one line still work, because
-rem  there no recipe is ever recognised: cats install Chrome Firefox VLC is unchanged.
+rem  offered to winget as package ids of their own. In cats install Drivers check, check
+rem  is an option of the Drivers recipe and not the id of a package. Several packages on
+rem  one line still work, because there no recipe is recognised at all: cats install
+rem  Chrome Firefox VLC installs the three of them.
 set catsRecipeTaken=0
 
 for %%a in (%*) do (

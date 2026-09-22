@@ -19,8 +19,8 @@
 #  all users, the provisioned package and msiexec all need it.
 # ============================================================
 
-# An unhandled error used to leave the caller with a bare exit code and no reason to
-# read. Every helper of this repository answers the same way since 2026-09-22.
+# An unhandled error is named on the console, with the line it came from, before the
+# exit code reaches the caller. Every helper of this repository answers the same way.
 trap {
 	Write-Host ("ERROR     : remove-teams failed: " + $_.Exception.Message + " [line " + $_.InvocationInfo.ScriptLineNumber + "]") -ForegroundColor Red
 	exit 2

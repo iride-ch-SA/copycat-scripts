@@ -32,8 +32,8 @@ $ErrorActionPreference = 'Stop'
 
 $DownloadPage = 'https://www.libreoffice.org/download/download-libreoffice/'
 
-# The LibreOffice language codes that are not a bare ISO 639 code. Read off the download page,
-# 2026-08-27: every other one of the 126 published languages is the two or three letter code.
+# The LibreOffice language codes that are not a bare ISO 639 code, read off the download page.
+# Every other one of the 126 published languages is the two or three letter code.
 $Variants = @(
 	'bn-IN', 'ca-valencia', 'en-GB', 'en-US', 'en-ZA', 'kmr-Latn',
 	'pa-IN', 'pt-BR', 'sa-IN', 'sat-Olck', 'sr-Latn', 'sw-TZ', 'zh-CN', 'zh-TW'
@@ -84,7 +84,7 @@ try {
 	if (-not $Arch) {
 		# The concatenation is parenthesised on purpose: -f binds tighter than +, so without it
 		# the format is applied to the second fragment alone and the message reaches the operator
-		# with a literal {0} in it. Three messages in this script shipped that way on 2026-08-27.
+		# with a literal {0} in it. Every message built this way in this script is parenthesised.
 		throw (('this Windows reports PROCESSOR_ARCHITECTURE={0}, and The Document Foundation ' +
 			'publishes no Windows build for it: install by hand') -f $env:PROCESSOR_ARCHITECTURE)
 	}
@@ -149,12 +149,11 @@ try {
 	}
 	Emit 'FILE' $msi
 	Emit 'URL' $url
-	# The release path on its own, because the recipe no longer downloads from the URL above:
-	# download.documentfoundation.org killed the connection on the first field run, 2026-08-27,
-	# and ps\tdf-fetch.ps1 walks a list of mirrors of which the redirector is only the first.
-	# The URL is still emitted, and still required to appear in the page, because that is what
-	# proves the version and the architecture are published - and it is the address a human
-	# should be given when the download fails.
+	# The release path on its own, because the download walks a list of mirrors of which the
+	# redirector of the URL above is only the first: ps\tdf-fetch.ps1 builds an address per
+	# source out of this path. The URL is emitted, and required to appear in the page, because
+	# that is what proves the version and the architecture are published - and it is the address
+	# to give a human when the download fails.
 	Emit 'RELPATH' $rel
 
 	# ---- help pack --------------------------------------------------------------------------
@@ -163,13 +162,10 @@ try {
 	# megabytes, but LibreOffice falls back to the online help when it is absent, and not every
 	# one of the 126 UI languages has one.
 	#
-	# Its name is emitted without being probed. Until 2026-08-27 a HEAD on the redirector decided
-	# whether to emit it at all, which was wrong twice over: the redirector is the one TDF host
-	# that will not answer this fleet, so the probe reported «no help pack» for every language
-	# including the ones that have one - and the probe asked one host a question that the download
-	# then asks five. ps\tdf-fetch.ps1 is called with -Optional instead, and a 404 from every
-	# mirror is what now means the help pack does not exist. One mechanism, and the answer comes
-	# from whoever is actually going to serve the file.
+	# Its name is emitted without being probed: ps\tdf-fetch.ps1 is called with -Optional, and a
+	# 404 from every mirror is what means the help pack does not exist. The question is asked of
+	# the hosts that are going to serve the file, and not of the redirector alone - it is the one
+	# TDF host this fleet cannot reach, so it would answer «absent» for every language.
 	$helpFile = 'LibreOffice_{0}_Win_{1}_helppack_{2}.msi' -f $file, $token, $lo
 	Emit 'HELPFILE' $helpFile
 	Emit 'HELPURL' ('{0}/{1}' -f $base, $helpFile)

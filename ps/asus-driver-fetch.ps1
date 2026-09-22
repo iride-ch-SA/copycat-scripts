@@ -9,10 +9,9 @@
 #  has to read:
 #    1. is this an ASUS board at all, and what is its model? The
 #       SMBIOS board product is the model the catalogue is keyed
-#       by - verified 2026-09-21: Win32_BaseBoard.Product says
-#       NUC15CRBC5 and the catalogue answers to that string as
-#       it is. It is not shortened and not translated into the
-#       kit name: the kit is a *different* catalogue
+#       by: Win32_BaseBoard.Product in full, not shortened and
+#       not translated into the kit name, which is a different
+#       catalogue
 #    2. what does this machine still need? A device Windows
 #       reports as ERROR or UNKNOWN is a candidate, and its PnP
 #       class picks the catalogue groups worth fetching. A
@@ -47,21 +46,12 @@
 #
 #  THE FAMILY INF PACK. The catalogue of a model holds single
 #  packages and, next to them, one archive of over a gigabyte
-#  with the drivers of the whole family in it. A posa does not
-#  wait for that by accident, so it is left out of the ordinary
-#  fetch - but it is not optional when it is the only thing that
-#  holds the driver of a device on this board. Measured
-#  2026-09-21 on a NUC15CRBC5: the catalogue of that model has no
-#  Audio group at all, and the multimedia audio controller of the
-#  board - Intel Smart Sound Technology - exists in the catalogue
-#  only inside NUC15CR_RPL-R_Driver_INF_Pack_ww45-2025, together
-#  with Intel RST, the I226 network adapter and CSME. No run
-#  without the pack could ever fix that device.
-#  So: when step 5 finds a device no package claims and the
-#  catalogue offers the pack, the pack is fetched, and the size
-#  ceiling does not apply to it - it is not an accident at that
-#  point, it is the answer. -NoInfPack refuses that, for a posa
-#  on a line that cannot afford it.
+#  with the drivers of the whole family in it. It is left out of
+#  the ordinary fetch, and taken when step 5 finds a device that
+#  no single package claims: a catalogue can hold the driver of a
+#  device - audio, storage, network - only inside that pack. The
+#  size ceiling does not apply to it there. -NoInfPack refuses
+#  it; -InfPack takes it instead of the single packages.
 #
 #  Parameters:
 #    -Path <folder>   the driver library, C:\Admin\Drivers by
@@ -132,11 +122,10 @@ function Write-Warn([string]$text)   { Write-Host ("WARNING   : " + $text) -Fore
 function Write-Fail([string]$text)   { Write-Host ("ERROR     : " + $text) -ForegroundColor Red }
 function Write-Plain([string]$text)  { Write-Host ("            " + $text) }
 
-# tar.exe is bsdtar, part of Windows since 10 1803, and the only one of the three ways below
-# that survives a path longer than 260 characters. The Intel DTT package holds a release note
-# whose path under C:\Admin\Drivers is 270 characters long, and both .NET calls stopped on it on
-# 2026-09-21 with "could not find a part of the path", leaving the package half unpacked - the
-# kind of failure that ends with an .inf that is simply not there.
+# tar.exe is bsdtar, part of Windows since 10 1803, and the only one of the three ways below that
+# survives a path longer than 260 characters. Some of these packages have them, and the .NET calls
+# stop there with "could not find a part of the path", leaving the package half unpacked - which
+# ends with an .inf that is simply not present.
 function Expand-Package([string]$archive, [string]$destination) {
 	if (-not (Test-Path -LiteralPath $destination)) { New-Item -ItemType Directory -Path $destination -Force | Out-Null }
 	# Not Join-Path on $env:SystemRoot straight: an empty variable makes that call throw, and an
@@ -163,13 +152,9 @@ trap {
 	exit 2
 }
 
-# The size in the catalogue is not the size of the file. Measured 2026-09-22 on NUC15CRBC5:
-# "Intel Graphics V101.5972" is published as 1.99 MB and the server answers Content-Length
-# 1 060 326 703, that is 1011 MB - a zip holding one nested zip with graphics 101.6452 in it,
-# the same driver the 948 MB Arc package carries. A posa fetched both, some two gigabytes
-# announced as one, and the ceiling that exists to stop exactly that never saw them. So the
-# ceiling is applied to what the server says, and the catalogue figure is only what is printed
-# when the server does not answer.
+# The size in the catalogue is not the size of the file: a package published as 1.99 MB can be a
+# gigabyte on the wire. The ceiling is therefore applied to the Content-Length the server answers,
+# and the catalogue figure is only what is printed when the server does not answer.
 function Get-RemoteSizeMB([string]$url) {
 	try {
 		$response = Invoke-WebRequest -Uri ($url -replace ' ', '%20') -Method Head -UseBasicParsing -TimeoutSec 30 -ErrorAction Stop
@@ -306,7 +291,7 @@ try {
 }
 
 # A model the catalogue does not know does not answer with an error: it answers with a null
-# result. Verified 2026-09-21 - NUC15CRB, the model above cut short, answers exactly this.
+# result. A model name cut short is such a model.
 if ($null -eq $catalogue -or $null -eq $catalogue.Result -or $null -eq $catalogue.Result.Obj) {
 	$status = if ($null -ne $catalogue -and $catalogue.Status) { $catalogue.Status } else { 'no status' }
 	Write-Fail "the ASUS catalogue has no entry for model $Model (status: $status)"
@@ -315,14 +300,11 @@ if ($null -eq $catalogue -or $null -eq $catalogue.Result -or $null -eq $catalogu
 	exit 3
 }
 
-# infpack means the pack INSTEAD of the single packages, not on top of them. Measured 2026-09-22
-# on a NUC15CRBC5: taking both fetched some 3.3 GB where the pack alone is 1.11 GB, and seven of
-# the eleven single packages were the very version the pack already carries. Neither side is a
-# superset of the other, which is why the ordinary run still exists: three singles are newer than
-# the pack - ASUS System Control Interface 3.1.43.0 against 3.1.36.0, and graphics 101.6452
-# against 101.5972 - while the Wi-Fi of the pack, 23.160.0.4G, is newer than the single 23.70.0.6G.
-# What the pack alone holds, and no single package does, is SST audio, the I226 adapter, RST and
-# CSME. So: infpack is the one-big-download form, the ordinary run is the up-to-date one.
+# infpack means the pack INSTEAD of the single packages, not on top of them: one download of over
+# a gigabyte rather than a dozen. Neither side is a superset of the other - some single packages
+# are newer than the same driver inside the pack, some are older, and a catalogue can hold drivers
+# that exist only inside the pack - so the ordinary run takes the singles and falls back to the
+# pack, and infpack takes the pack alone.
 $packOnly = ($InfPack -and -not $NoInfPack)
 if ($InfPack -and $NoInfPack) {
 	Write-Warn "infpack and noinfpack were both asked for; the refusal wins and the single packages are taken"
@@ -591,9 +573,8 @@ if ($Check) {
 
 # ---- 5. Is every device claimed now ----
 #
-# The library is read with the matcher cats install Drivers will use, so that what is measured
-# here is what will happen there. A device nothing claims is the one case where the family INF
-# pack earns its gigabyte.
+# The library is read with the matcher cats install Drivers uses, so that what is measured here is
+# what will happen there. A device nothing claims is what sends the fetch after the family pack.
 
 $uncovered = @()
 if ($needy.Count -gt 0) {

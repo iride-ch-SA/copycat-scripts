@@ -2,10 +2,9 @@
 # line, for a batch caller. Same shape as nvidia-driver-lookup.ps1, same reason: the caller
 # reads stdout and nothing else.
 #
-# Why this exists at all. The display driver full package does *not* carry NVIDIA App: field
-# report of 2026-08-20, a Wild Cat installed from the quadro-rtx-desktop-notebook package came
-# out with the driver and the Control Panel but no NVIDIA App. NVIDIA ships the App as its own
-# download, and the Microsoft Store listing (product XP8CLZL93F5Z4P) is not an MSIX: it carries
+# Why this exists at all. The display driver full package does *not* carry NVIDIA App: a machine
+# installed from the quadro-rtx-desktop-notebook package comes out with the driver and the Control
+# Panel and no NVIDIA App. NVIDIA ships the App as its own download, and the Microsoft Store listing (product XP8CLZL93F5Z4P) is not an MSIX: it carries
 # no package family name and its installer type is WPM, that is a pointer to the very same
 # Win32 setup. So there is nothing to provision the way HPSA9 is provisioned, and nothing that
 # installs per user: NVIDIA's own setup is the whole distribution.

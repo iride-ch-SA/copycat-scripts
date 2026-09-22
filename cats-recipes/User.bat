@@ -118,12 +118,10 @@ if /I "%~1"=="create" (
 		)
 	)
 
-	rem hide is applied here, after the groups and on every form. It used to
-	rem live inside the Administrators branch, so cats create User mario hide
-	rem - which normalises to create mario ask "" hide - took the else branch:
-	rem the account was created, added to Users and to Remote Desktop Users
-	rem and left on the sign-in screen, with no error to say so. Only
-	rem cats create User mario Administrators hide ever hid anyone.
+	rem hide is applied here, after the groups and on every form of the
+	rem command: cats create User mario hide normalises to create mario ask ""
+	rem hide and takes the non-administrative branch, and it has to hide the
+	rem account just as cats create User mario Administrators hide does.
 	rem A hide that fails is reported: the account exists either way, so the
 	rem operator has to know it is still listed.
 	if /I "%~5"=="hide" (
@@ -207,8 +205,8 @@ rem  The NAME of that value is not the name that gets typed: it
 rem  has to be the one the account signs in under, the same rule
 rem  that governs C:\Admin\Others\<name>.bat. Getting it wrong
 rem  gives no error at all - reg add writes a value under any
-rem  name and returns 0 - so the recipe used to report success
-rem  while the account stayed visible.
+rem  name and returns 0 - and the account stays visible while
+rem  the command reports success.
 rem  That key lists LOCAL accounts, so ps\resolve-logon-name.ps1
 rem  is asked with -local: it measures the name on the machine and
 rem  refuses a domain or an Entra account outright, instead of

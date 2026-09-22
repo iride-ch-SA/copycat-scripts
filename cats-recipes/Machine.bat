@@ -10,14 +10,12 @@ set MC_CHAIN=clean disks+clean tmp+clean win-updates+clean dism-online+clean sfc
 
 if /I "%~1"=="create" (
 
-	rem  The identifier is computed ONCE, and the same value is shown and written. Until
-	rem  2026-09-22 this block ran the helper twice - once to print and once to capture -
-	rem  so console and file were two answers to the same question, and nothing guaranteed
-	rem  they agreed.
-	rem  THERE IS NO SALT. hid-generator.ps1 declares -Verbose and nothing else, so a
-	rem  second word typed after Machine went into $args and was dropped in silence,
-	rem  the script having no CmdletBinding attribute to refuse it. The branch that
-	rem  pretended to pass it is gone, and the word is named instead of ignored.
+	rem  The identifier is computed ONCE, and the same value is shown and written: the
+	rem  helper is run a single time, so console and file cannot be two answers to the
+	rem  same question.
+	rem  THERE IS NO SALT. hid-generator.ps1 declares -Verbose and nothing else, and its
+	rem  CmdletBinding attribute refuses anything else. A second word typed after Machine
+	rem  is named on the console and ignored, never passed on.
 	rem  Adding a salt is a change to the helper, not to this line.
 	if not "%~2"=="" (
 		echo [33mWARNING   : cats create Machine takes no second parameter, and %~2 is ignored [0m
@@ -62,18 +60,16 @@ rem ============================================================
 rem  prepare gives the machine a random name, PC- followed by 9
 rem  characters drawn from A-Z0-9. The name takes effect at the
 rem  next restart, and the restart is ASKED FOR, not ordered:
-rem  until 2026-09-22 this used Rename-Computer -Restart and
-rem  rebooted on the spot, which took away both whatever was
-rem  typed after Machine on the same line and any chain this
-rem  step belonged to - cats-resume registers the task that
-rem  picks a chain up only when it is the one ordering the
-rem  restart. It is now a step cats clean Wildcat can carry.
+rem  cats-resume.bat is told one is needed and the chain this
+rem  step belongs to orders it, which is what keeps whatever
+rem  follows on the command line, and the rest of the chain,
+rem  alive. That is why this is a step cats clean Wildcat can
+rem  carry.
 rem  The name travels in the environment rather than inside the
 rem  quotes of -command, the same way the account name does in
 rem  User.bat. Rename-Computer fails without an elevated prompt,
-rem  and on a name already taken on the domain: it used to fail
-rem  silently, with the recipe reporting nothing, so the error
-rem  is now raised and the exit code carries it.
+rem  and on a name already taken on the domain: the error is
+rem  raised and the exit code carries it.
 rem ============================================================
 
 :rename-machine
@@ -93,8 +89,8 @@ rem  spot: cats-prepare.bat would lose whatever was typed after Machine on the
 rem  same line, and a chain would lose its own runner, because cats-resume
 rem  registers the task that picks the chain up only when IT orders a restart.
 rem  So the name is written and a restart is asked for, the way every other
-rem  step of this repository asks - see cats-recipes\Drivers.bat and, since
-rem  2026-09-22, cats clean win-updates. Typed by hand, outside a chain,
+rem  step of this repository asks - see cats-recipes\Drivers.bat and
+rem  cats clean win-updates. Typed by hand, outside a chain,
 rem  nothing restarts: the name is pending and the console says so.
 powershell -noprofile -executionpolicy bypass -command "try { Rename-Computer -NewName $env:CATS_NEWNAME -ErrorAction Stop } catch { Write-Error $_; exit 1 }"
 if errorlevel 1 (
@@ -127,10 +123,9 @@ rem
 rem  Note on the order of the last two, dism-online before sfc:
 rem  DISM /RestoreHealth mends the component store sfc /scannow
 rem  repairs from, so the store is sound before sfc reads it -
-rem  which is the order Microsoft documents for a repair. The
-rem  series was first written the other way round on 2026-09-22
-rem  and reversed the same day, so sfc is not left reporting
-rem  corruption it could not correct.
+rem  which is the order Microsoft documents for a repair, and
+rem  which keeps sfc from reporting corruption it cannot
+rem  correct.
 rem
 rem  Exit codes: 0 the chain was opened, 2 it was not - another
 rem  chain is pending and was kept, or the marker could not be

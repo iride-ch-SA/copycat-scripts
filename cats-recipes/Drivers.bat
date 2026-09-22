@@ -54,12 +54,11 @@ rem  with the rest, because a posa does not wait for it by
 rem  accident - but once the single packages are unpacked the
 rem  library is read back with the same matcher cats install
 rem  Drivers uses, and a device that nothing can serve sends the
-rem  fetch after the pack, size ceiling or not. That is not a
-rem  nicety: measured 2026-09-21, the catalogue of a NUC15CRBC5
-rem  has no Audio group at all and the driver of its multimedia
-rem  audio controller exists there only inside the pack, so
-rem  without this the machine ends a posa without audio and with
-rem  a console saying every package was installed.
+rem  fetch after the pack, size ceiling or not. A catalogue can
+rem  have no group for a whole class of device - a NUC15CRBC5 has
+rem  none for Audio - with the driver of that device published
+rem  only inside the pack, and the machine would end the posa
+rem  without it while the console says every package installed.
 rem
 rem  infpack takes the pack INSTEAD of the single packages, not
 rem  on top of them: on that same catalogue it is 1.11 GB against
@@ -85,12 +84,11 @@ rem  is left for the operator to restart.
 rem
 rem  The restart is asked for even when a package failed to
 rem  install. A restart pending is not a verdict on the run, it
-rem  says the run is not over - and until 2026-09-21 a failure
-rem  was read first, so three packages signed with an expired
-rem  certificate, none of them a driver for any device of the
-rem  machine, were enough to swallow the restart and end the
-rem  chain with five devices of six working. What failed is
-rem  named on the console either way.
+rem  says the run is not over: a package that failed to stage -
+rem  an expired certificate, say, on something no device of this
+rem  machine needs - must not take the restart away and end the
+rem  chain with a device short. What failed is named on the
+rem  console either way.
 rem
 rem  Exit codes: 0 a driver was installed, 1 every device already
 rem  had a working driver, 2 an installation failed, 3 a device

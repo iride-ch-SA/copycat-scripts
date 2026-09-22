@@ -11,11 +11,11 @@ rem  Why. cmd.exe does not read a .bat into memory: it keeps a
 rem  byte offset into the file and reopens it after every command
 rem  to read the next line. cats update Scripts pulls over the
 rem  very files that are being read that way, and from the pull
-rem  on the old offset lands in the middle of the new content. On
-rem  2026-09-21 that ran half a rem as a command, took a Windows
-rem  Update block out of the if that guards it and then ran the
-rem  whole dispatcher a second time. A chain that holds
-rem  cats-resume.bat open can restart the machine the same way.
+rem  on the old offset lands in the middle of the new content:
+rem  half a rem runs as a command, a block leaves the if that
+rem  guards it, the dispatcher runs a second time. A chain that
+rem  holds cats-resume.bat open can restart the machine the same
+rem  way.
 rem
 rem  Two variables come out of here, and both are needed:
 rem    CATS_HOME  the copy this run reads its .bat files from

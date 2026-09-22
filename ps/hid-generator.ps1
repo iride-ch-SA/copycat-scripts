@@ -6,10 +6,9 @@
 #  modules and the disks. One line on standard output, and
 #  nothing else, because the caller captures it with for /f.
 #
-#  THERE IS NO SALT, and there never was: this script takes no
-#  argument but -Verbose. A second word typed after
-#  cats create Machine used to land in $args and be dropped in
-#  silence; with [CmdletBinding()] it is now refused instead.
+#  THERE IS NO SALT: this script takes no argument but -Verbose.
+#  [CmdletBinding()] is what refuses a word it does not declare,
+#  instead of dropping it into $args in silence.
 #
 #  -Verbose, or -v, walks through what goes into the hash. It
 #  writes to the verbose stream and not to standard output, so a
@@ -20,8 +19,8 @@
 [CmdletBinding()]
 param()
 
-# An unhandled error used to leave the caller with a bare exit code and no reason to
-# read. Every helper of this repository answers the same way since 2026-09-22.
+# An unhandled error is named on the console, with the line it came from, before the
+# exit code reaches the caller. Every helper of this repository answers the same way.
 trap {
 	Write-Host ("ERROR     : hid-generator failed: " + $_.Exception.Message + " [line " + $_.InvocationInfo.ScriptLineNumber + "]") -ForegroundColor Red
 	exit 1

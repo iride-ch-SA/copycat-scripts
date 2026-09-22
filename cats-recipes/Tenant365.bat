@@ -10,12 +10,10 @@ rem  cats deploy Tenant365 gets this machine ready to be joined
 rem  to a Microsoft 365 / Entra ID tenant: the sign-in screen
 rem  lists the accounts that sign in on it, and the local
 rem  administrative account is taken off that list.
-rem  It is what cats prepare deploy-azure did until September
-rem  2026, and that shortcut no longer exists. The work is here
-rem  because an inline block of cats-prepare.bat could not be
-rem  told whether it had worked: nothing read the outcome of
-rem  what it called, so a machine that refused both settings
-rem  finished with the same DONE line as one that took them.
+rem  It is a recipe of its own, and not an inline block of
+rem  cats-prepare.bat, because a recipe reads the outcome of
+rem  every step it calls: a machine that refuses a setting is
+rem  told apart from one that takes it.
 rem  The join itself stays the operator's: the third step only
 rem  opens the page of Settings it is done from, and the steps
 rem  on screen - tenant account, password, second factor - are

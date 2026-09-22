@@ -16,9 +16,9 @@ set HPSA_EXE=C:\Admin\Drivers\HP\sp%HPSA_SP%.exe
 
 rem The SoftPaq is run the way HP ships it: same file name as on ftp.hp.com, no switch and
 rem no extraction step. Extracting it with /s /e /f and then running the extracted Setup.exe
-rem made the setup refuse the machine with "this version of HP Support Assistant seems to be
-rem incompatible with the operating system in use" - field test of 2026-08-13. Do not rename
-rem the file and do not split the run in two steps.
+rem makes the setup refuse the machine with "this version of HP Support Assistant seems to be
+rem incompatible with the operating system in use". Do not rename the file and do not split the
+rem run in two steps.
 
 if /I "%~1"=="install" (
 	if not exist "C:\Admin\Drivers\HP" ( mkdir C:\Admin\Drivers\HP )

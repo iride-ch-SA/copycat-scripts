@@ -8,11 +8,10 @@ if /I "%~1"=="install" (
 	if exist "%CATS_HOME%\cats-recipes\BgInfo.bat" ( 
 		call "%CATS_HOME%\cats-recipes\BgInfo.bat" install
 	)
-	rem  Acronis.Agent is no longer part of the utilities of a machine: it is not
-	rem  used any more. The recipe stays where it is for the machines that still
-	rem  want it, and cats install Acronis.Agent still works.
-	rem  Autologon takes its place, and it belongs in the image rather than in the
-	rem  deployment that uses it: the first restart cats clean Wildcat asks for can
+	rem  Acronis.Agent is not part of the utilities installed here. Its recipe stays
+	rem  in place for the machines that want it, and cats install Acronis.Agent
+	rem  installs it on demand.
+	rem  Autologon belongs in the image rather than in the deployment that uses it: the first restart cats clean Wildcat asks for can
 	rem  happen before that machine has a network, and a tool to be downloaded then
 	rem  is a tool that is not there. No set-permissions for it, unlike BgInfo:
 	rem  BgInfo runs at the logon of every user, Autologon is for an administrator.

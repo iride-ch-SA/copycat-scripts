@@ -7,9 +7,9 @@ if not defined CATS_ROOT set "CATS_ROOT=C:\Admin\Scripts"
 rem NVIDIA display driver, full package, plus NVIDIA App.
 rem
 rem The driver package carries the display driver and NVIDIA Control Panel, and it does *not*
-rem carry NVIDIA App: field report of 2026-08-20, a Wild Cat installed from the
-rem quadro-rtx-desktop-notebook package came out without it. The App is a separate NVIDIA
-rem download, so the recipe fetches and installs it as a second step - see the end of the
+rem carry NVIDIA App: a machine installed from the quadro-rtx-desktop-notebook package comes out
+rem without it. The App is a separate NVIDIA download, so the recipe fetches and installs it as a
+rem second step - see the end of the
 rem install branch and ps\nvidia-app-lookup.ps1.
 rem
 rem The recipe downloads, it does not install: the wizard is driven by our operator, the same
@@ -56,12 +56,10 @@ if /I "%~1"=="install" (
 	set NV_URL=
 
 	rem The lookup writes to a file, stderr folded in, and the file is what gets parsed. Reading
-	rem the pipe directly - as the first version did - throws stderr away, so a PowerShell that
-	rem fails before its first line of output leaves nothing behind and the recipe can only say
-	rem that no package came back. That is exactly what the first run on a Wild Cat produced,
-	rem 2026-08-20, and the cause was unrecoverable afterwards. The file stays on disk on
-	rem purpose: it is the evidence for whoever looks at the failure. -command, not -file,
-	rem because that is the form already in exercise in Machine.bat and User.bat.
+	rem the pipe directly throws stderr away, so a PowerShell that fails before its first line of
+	rem output leaves nothing behind and the recipe can only say that no package came back. The
+	rem file stays on disk on purpose: it is the evidence for whoever looks at the failure.
+	rem -command, not -file, because that is the form in exercise in Machine.bat and User.bat.
 	set "NV_LOG=%NV_DIR%\lookup.log"
 
 	echo [36mRECIPE    : Detecting the NVIDIA GPU and looking up its current driver [0m
@@ -118,12 +116,10 @@ if /I "%~1"=="install" (
 	rem
 	rem These two lines are coloured by PowerShell and not by an escape sequence, on purpose. A
 	rem graphical installer is free to leave the console's virtual-terminal mode off when it
-	rem returns, and the NVIDIA one does: on the run of 2026-08-20 the escape sequences of the
-	rem line below reached the screen as text, while every line printed before the installer -
-	rem and every line printed after the powershell call below, which turns that mode back on -
-	rem came out coloured. Write-Host paints through the console API, which does not depend on
-	rem the mode, so it is right either way. Every recipe that prints after an attended
-	rem installer has the same exposure.
+	rem returns, and the NVIDIA one does: an escape sequence printed after it reaches the screen
+	rem as text, until a powershell call turns that mode back on. Write-Host paints through the
+	rem console API, which does not depend on the mode, so it is right either way. Every recipe
+	rem that prints after an attended installer has the same exposure.
 	powershell -noprofile -command "Write-Host 'RECIPE    : Driver version now reported by Windows:' -ForegroundColor Cyan; Get-CimInstance Win32_VideoController | Where-Object { $_.Name -match 'NVIDIA' } | ForEach-Object { '  ' + $_.Name + ' - ' + $_.DriverVersion }"
 
 	if not "!nvExit!"=="0" (
@@ -137,8 +133,7 @@ if /I "%~1"=="install" (
 	rem same Win32 setup NVIDIA publishes itself. There is therefore nothing to provision the way
 	rem HPSA9 is provisioned, and no per-user variant to avoid: the setup is NVI2, the same
 	rem installer framework as the driver, and NVI2 installs per machine - Program Files, HKLM,
-	rem services - so the App is there for every user of the machine by construction. That is the
-	rem "for all users" the principal asked for on 2026-08-20.
+	rem services - so the App is there for every user of the machine by construction.
 	rem
 	rem This step is silent, unlike the driver above: the driver wizard is attended because the
 	rem operator chooses what the driver installs, while the App has nothing to choose. NVI2 takes
@@ -150,11 +145,9 @@ if /I "%~1"=="install" (
 	set "NV_APPCHECK=$k = @(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*','HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -like 'NVIDIA App*' }); if ($k.Count -gt 0 -or (Test-Path ($env:ProgramFiles + '\NVIDIA Corporation\NVIDIA app\CEF\NVIDIA app.exe'))) { exit 0 } else { exit 1 }"
 
 	rem The first check names what it found, the one after the install only decides. A bare "already
-	rem installed" is not evidence: on the run of 2026-08-20 it appeared on a machine that had come out
-	rem of the previous run *without* the App, and nothing in the output said whether an App had really
-	rem been installed in between or whether this test answers yes to something the driver leaves
-	rem behind. Printing the uninstall entry with its version, or the path that matched, settles that
-	rem question the next time instead of raising it again.
+	rem installed" is not evidence: it does not say whether an App was really installed or whether the
+	rem test answered yes to something the driver leaves behind. The uninstall entry with its version,
+	rem or the path that matched, settles that question on the console.
 
 	set "NV_APPFOUND=$k = @(Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*','HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -like 'NVIDIA App*' }); $p = $env:ProgramFiles + '\NVIDIA Corporation\NVIDIA app\CEF\NVIDIA app.exe'; if ($k.Count -gt 0) { $n = $k[0].DisplayName; $v = $k[0].DisplayVersion; if (-not $v) { $v = 'version not declared' }; Write-Host ('RECIPE    : NVIDIA App is already installed, nothing to do: ' + $n + ' ' + $v) -ForegroundColor Cyan; exit 0 } elseif (Test-Path $p) { Write-Host ('RECIPE    : NVIDIA App is already installed, nothing to do: no uninstall entry, found ' + $p) -ForegroundColor Cyan; exit 0 } else { exit 1 }"
 

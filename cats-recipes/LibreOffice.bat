@@ -9,8 +9,7 @@ rem
 rem Why not winget. The winget manifest installs the same MSI but passes none of its language
 rem properties, so the machine ends up with whatever the installer's automatic selection makes of
 rem it - which on a Windows imaged in one language and used in another is not the language the
-rem user reads. The principal reported it as unreliable in that respect on 2026-08-27. This
-rem recipe sets the language explicitly instead of hoping for it, which is the whole reason it
+rem user reads. This recipe sets the language explicitly instead, which is the whole reason it
 rem exists; everything else it does, winget would also do.
 rem
 rem How the language gets in. On Windows the LibreOffice MSI is multilingual: the mirror carries
@@ -21,10 +20,9 @@ rem macOS, where a langpack is a separate file. ps\libreoffice-lookup.ps1 works 
 rem UI_LANGS must take from the culture Windows reports, and also resolves the current version
 rem and its URL: TDF publishes no evergreen URL, every release sits under its own version path.
 rem
-rem Where the bytes come from. Not from download.documentfoundation.org, or at least not from it
-rem alone: the redirector killed the connection on the first field run of this recipe, 2026-08-27,
-rem and had refused the agent's machine the same day while four direct TDF mirrors answered. The
-rem download therefore goes through ps\tdf-fetch.ps1, which tries the redirector first and then
+rem Where the bytes come from. Not from download.documentfoundation.org alone: the redirector
+rem closes the connection on some networks, this fleet's included, while the direct TDF mirrors
+rem answer. The download goes through ps\tdf-fetch.ps1, which tries the redirector first and then
 rem those mirrors, and verifies the Authenticode signature of what arrives before this recipe
 rem installs it - the packages are signed by The Document Foundation, so the bytes are checked
 rem whichever mirror served them.
@@ -69,8 +67,7 @@ if /I "%~1"=="install" (
 
 	rem The lookup writes to a file with stderr folded in, and the file is what gets parsed:
 	rem for /f on the pipe throws stderr away, so a PowerShell that dies before its first line
-	rem of output would leave the recipe able to say only that nothing came back. Nvidia was
-	rem shipped that way and the first field run, 2026-08-20, was wasted on it. The file stays
+	rem of output would leave the recipe able to say only that nothing came back. The file stays
 	rem on disk on purpose - it is the evidence for whoever looks at a failure. Every PowerShell
 	rem call below follows the same shape, which is also why none of them is read through a
 	rem backtick FOR: a pipe or a redirection inside one needs caret escaping that cannot be
@@ -188,9 +185,9 @@ if /I "%~1"=="install" (
 	rem the interface, is not bundled in the Windows installer.
 	rem
 	rem -Optional is what separates «no such help pack» from «the download failed»: a 404 on every
-	rem mirror is MISSING, anything else is a failure worth naming. Nothing probes for it first -
-	rem the lookup used to, with a HEAD on the redirector, and that HEAD answered «absent» for
-	rem every language on a fleet the redirector will not talk to.
+	rem mirror is MISSING, anything else is a failure worth naming. Nothing probes for it first: a
+	rem HEAD on the redirector answers «absent» for every language on a fleet the redirector will
+	rem not talk to.
 	if not "!LO_HELPFILE!"=="" (
 		set "LO_HELPMSI=%LO_DIR%\!LO_HELPFILE!"
 		set "LO_HELPLOG=%LO_DIR%\fetch-helppack.log"

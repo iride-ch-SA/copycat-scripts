@@ -210,16 +210,12 @@ if (Test-Path -LiteralPath $UsersDir) {
 
 # ---- 4. The event logs ----
 
-# Only the channels that actually hold something are cleared. wevtutil el lists every
-# channel REGISTERED on the machine - about 1200 on a Windows 11 - and clearing an empty
-# one succeeds, so a sweep of the whole list reported the same 1202 and 1200 on a machine
-# that had just been swept as on one that had never been: the number was a property of
-# Windows, not of the state of this machine, and it said nothing. Measured 2026-09-22 on a
-# machine in deployment, reported by the operator: same figures on two runs in a row.
-# Get-WinEvent -ListLog answers the record count of every channel in ONE call, so the
-# channels that hold nothing are skipped: on a machine just installed that is some fifty
-# clears instead of twelve hundred, and the figure on the console is the number of logs
-# that really had something in them.
+# Only the channels that actually hold something are cleared. wevtutil el lists every channel
+# REGISTERED on the machine - about 1200 on a Windows 11 - and clearing an empty one succeeds,
+# so a sweep of the whole list says the same number on a machine just swept as on one never
+# swept: it is a property of Windows and not of the state of the machine. Get-WinEvent -ListLog
+# answers the record count of every channel in ONE call, so the channels that hold nothing are
+# skipped and the figure on the console is the number of logs that had something in them.
 $logsCleared = 0
 $logsLeft = 0
 if ($live -and $onWindows -and (Get-Command wevtutil.exe -ErrorAction SilentlyContinue)) {
@@ -233,9 +229,8 @@ if ($live -and $onWindows -and (Get-Command wevtutil.exe -ErrorAction SilentlyCo
 		}
 		$counted = $true
 	} else {
-		# Without Get-WinEvent there is no record count to read, so the old sweep of the
-		# whole list is the only thing left - and the console must not claim a number it
-		# did not measure
+		# Without Get-WinEvent there is no record count to read, so the whole registered
+		# list is swept - and the console must not claim a number it did not measure
 		$full = @(& wevtutil.exe el 2>$null | Where-Object { $_ -ne '' })
 		$counted = $false
 	}

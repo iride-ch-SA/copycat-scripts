@@ -23,19 +23,15 @@ param (
 # notebook alike, and a single desktop/notebook file serves the GeForce line. pfid is still
 # resolved when possible, so that an older GPU gets the branch that still supports it.
 #
-# Verified against the service on 2026-08-20: series 132, 134, 122, 124, 109 and 116 all
-# answer 596.86 quadro-rtx-desktop-notebook, GeForce series answer 610.88 desktop or notebook.
-#
 # -Name overrides the detected GPU name, -Psid forces the series: both exist for the machine
 # whose adapter Windows cannot name yet, which is exactly the machine that needs a driver.
 
 $ErrorActionPreference = "Stop"
 
 # Every failure has to leave the machine on stdout, because the batch caller reads stdout and
-# nothing else: an error written to stderr reaches nobody and the recipe can then only say
-# that no package came back, which is what happened on the first run on a Wild Cat,
-# 2026-08-20. With ErrorActionPreference Stop any unforeseen error is terminating, so the
-# trap is what turns it into a line the caller can print.
+# nothing else: an error written to stderr reaches nobody and the recipe can then only say that
+# no package came back. With ErrorActionPreference Stop any unforeseen error is terminating, so
+# the trap is what turns it into a line the caller can print.
 trap {
 	Write-Output "ERROR=$($_.Exception.Message) [line $($_.InvocationInfo.ScriptLineNumber)]"
 	exit 1
