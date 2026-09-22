@@ -190,8 +190,27 @@ try {
 	Write-Warn "the Sysinternals eula flag could not be written: $($_.Exception.Message)"
 }
 
-# A local account logs on to this machine, so the domain is the machine
-$domain = $env:COMPUTERNAME
+# A local account logs on to this machine, so the domain is the machine itself - and the name
+# that matters is the one the machine will carry at the NEXT restart, not the one it has now.
+# cats prepare Machine renames and then asks for a restart, so a logon written while that
+# rename is pending would carry the OLD name and Windows would stop at the sign in screen.
+# ComputerName holds the pending name, ActiveComputerName the running one; with no rename
+# pending the two are the same and this changes nothing.
+function Get-PendingComputerName {
+	try {
+		$key = 'HKLM:\SYSTEM\CurrentControlSet\Control\ComputerName\ComputerName'
+		$pending = (Get-ItemProperty -Path $key -Name 'ComputerName' -ErrorAction Stop).ComputerName
+		if ($pending) { return [string]$pending }
+	} catch {
+		# No pending name to read is not a failure: the running name is the answer
+	}
+	return $env:COMPUTERNAME
+}
+
+$domain = Get-PendingComputerName
+if ($domain -ne $env:COMPUTERNAME) {
+	Write-Recipe "This machine becomes $domain at the next restart, and that is the name the automatic logon is written for"
+}
 Write-Recipe "Switching the automatic logon on for $domain\$Username with $([IO.Path]::GetFileName($exe))"
 & $exe $Username $domain $Password '/accepteula' | Out-Null
 

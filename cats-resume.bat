@@ -239,6 +239,13 @@ if !RS_CYCLE! GTR %RESUME_MAXCYCLE% (
 call :write
 if errorlevel 1 exit /b 2
 
+rem  The automatic logon is asserted again before EVERY restart of a chain that
+rem  asked for one, not once at its head: a posa orders a dozen restarts and each
+rem  of them is a chance for something to undo it, and cats prepare Machine changes
+rem  the very name the stored logon carries. Idempotent, and quiet when a chain
+rem  never asked for an automatic logon at all
+call :autologon-on
+
 call :register
 if errorlevel 1 (
 	echo [31mERROR     : the chain cannot pick itself up after the restart, so the machine is NOT restarted [0m
@@ -247,9 +254,13 @@ if errorlevel 1 (
 )
 
 echo [33mWARNING   : a restart is needed to continue, and it starts in %RESUME_WAIT% seconds [0m
-echo [94mUSAGE     : sign in as an administrator afterwards and the chain continues by itself [0m
+if defined RS_AUTOLOGON (
+	echo [94mUSAGE     : this machine signs itself back in and the chain carries on with nobody in front of it [0m
+) else (
+	echo [94mUSAGE     : sign in as an administrator afterwards and the chain continues by itself [0m
+)
 echo [94mUSAGE     : still to do: !RS_CHAIN! [0m
-shutdown /r /t %RESUME_WAIT% /c "CopyCat: the cats chain continues after you sign in"
+shutdown /r /t %RESUME_WAIT% /c "CopyCat: the cats chain continues after the restart"
 exit /b 0
 
 rem ============================================================
@@ -354,6 +365,25 @@ rem  chain. Quiet when there was nothing to switch off, which is
 rem  the ordinary case: this runs at every sign in that finds no
 rem  chain waiting.
 rem ============================================================
+
+:autologon-on
+if not exist "%CATS_ROOT%\ps\set-autologon.ps1" exit /b 0
+set "RS_AUTOLOGON="
+rem  Only for a chain that asked for the automatic logon, and the chain that asked
+rem  for it is the one still carrying its own "autologon off" - cats clean Machine
+rem  must not find itself signing this machine in
+if "!RS_CHAIN:autologon off=!"=="!RS_CHAIN!" exit /b 0
+powershell -noprofile -executionpolicy bypass -command "& %CATS_ROOT%\ps\set-autologon.ps1 -Mode on; exit $LASTEXITCODE" >nul 2>&1
+if errorlevel 3 (
+	echo [33mWARNING   : Autologon is not on this machine, so this restart waits for a sign in [0m
+	exit /b 0
+)
+if errorlevel 2 (
+	echo [33mWARNING   : the automatic logon could not be asserted, so this restart waits for a sign in [0m
+	exit /b 0
+)
+set "RS_AUTOLOGON=yes"
+exit /b 0
 
 :autologon-off
 if not exist "%CATS_ROOT%\ps\set-autologon.ps1" exit /b 0

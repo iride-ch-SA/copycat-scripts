@@ -23,52 +23,72 @@ rem  is what survives the restarts the drivers and the updates
 rem  ask for. Whoever signs in as an administrator after a
 rem  restart picks it up without typing anything. The order is
 rem  the same it always was:
-rem    1. cats install Drivers          - what the image already
+rem    1. cats clean Wildcat autologon on - this machine signs
+rem       itself in at every restart the chain orders, which is
+rem       what lets the chain reach its end with nobody here
+rem    2. cats install Drivers          - what the image already
 rem       carries, installed before anything needs a network: the
 rem       network card is itself one of these drivers
-rem    2. cats update Scripts           - the newest recipes
-rem    3. cats clean Wildcat restart    - so that what follows
+rem    3. cats update Scripts           - the newest recipes
+rem    4. cats clean Wildcat restart    - so that what follows
 rem       runs on those recipes and not on the ones this run
 rem       started with, see below
-rem    4. cats clean Wildcat virtio     - the Proxmox guest
+rem    5. cats clean Wildcat virtio     - the Proxmox guest
 rem       software out, and its driver packages out of the store
-rem    5. cats prepare Drivers infpack yes - the vendor catalogue,
+rem    6. cats prepare Drivers infpack yes - the vendor catalogue,
 rem       one download, installed without asking
-rem    6. cats clean Wildcat gpu        - Intel DSA and NVIDIA, if
+rem    7. cats clean Wildcat gpu        - Intel DSA and NVIDIA, if
 rem       present. After the catalogue, not before: the pack
 rem       carries the Intel graphics driver, and Intel DSA has
 rem       less to find when it is already in
-rem    7. cats clean Wildcat restart    - the drivers just put in
+rem    8. cats clean Wildcat restart    - the drivers just put in
 rem       take charge, and what hangs off them is enumerated
-rem    8. cats install Drivers          - what that enumeration
+rem    9. cats install Drivers          - what that enumeration
 rem       brought with it
-rem    9. cats update Windows           - everything else, until
+rem   10. cats update Windows           - everything else, until
 rem       it finds nothing left
-rem   10. cats install Drivers          - once more: Windows
+rem   11. cats install Drivers          - once more: Windows
 rem       Update installs drivers of its own and brings devices
 rem       up with them, and a pass that finds nothing to do says
 rem       so and costs one enumeration
-rem   11. cats clean Wildcat autologon off - and from here on the
-rem       machine asks for a sign in again
 rem   12. cats prepare Machine          - the random name, which
 rem       takes effect at the restart it asks for
 rem   13. cats create Machine           - the hardware identifier,
-rem       written last and therefore taken on the machine as it
+rem       taken after that last restart, on the machine as it
 rem       will be delivered
+rem   14. cats clean Wildcat background - the wallpaper, drawn on
+rem       a machine that by now has its final name
+rem   15. cats clean Wildcat autologon off - the last act, always
 rem
-rem  The last two are last, and in this order, on purpose. The
-rem  rename wants a restart, and it comes AFTER the automatic
-rem  logon is off so that nothing has to auto sign in with a name
-rem  that has just changed underneath it - the stored logon
-rem  carries the name the machine had when it was configured. The
-rem  operator signs in once after that restart, which is the same
-rem  visit in which they change the itadmin password by hand, and
-rem  the identifier is computed then, on the finished machine.
-rem  Worth knowing: the identifier does NOT depend on the machine
-rem  name - it is the BIOS serial, the processor id, the MAC
-rem  addresses and the serial numbers of memory and disks - so
-rem  this order is a matter of procedure, not of arithmetic. What
-rem  IS of substance is that it comes after the last restart.
+rem  THIS CHAIN ENDS ON ITS OWN. No step of it waits for anybody,
+rem  and nothing in it is a half of something an operator finishes
+rem  afterwards. What iride.ch does after it - the work that is
+rem  particular to the client, the itadmin password changed by
+rem  hand as the last step of THAT procedure - is a separate part
+rem  of the deployment and this recipe knows nothing about it.
+rem
+rem  Which is why the automatic logon stays on ACROSS the rename
+rem  and is switched off only by the final step. The rename takes
+rem  effect at the restart it asks for, and a stored logon carries
+rem  a machine name with it: cats-resume.bat asserts the logon
+rem  again before every restart it orders, and set-autologon.ps1
+rem  writes the name this machine will have AFTER that restart,
+rem  not the one it wears while the step runs. So it signs itself
+rem  in under its new name and the last three steps run unwatched.
+rem
+rem  The identifier comes after the last restart, on the finished
+rem  machine. It does NOT depend on the machine name - BIOS
+rem  serial, processor id, MAC addresses, serial numbers of memory
+rem  and disks - so what matters is only that it is taken at the
+rem  end, not that it follows the rename.
+rem
+rem  And autologon off is last for a reason that is not tidiness:
+rem  a machine that leaves for a client signing itself in as an
+rem  administrator is the one outcome of all this that would
+rem  really matter. cats-resume.bat switches it off as well
+rem  wherever a chain stops being a chain - finished, cancelled or
+rem  stopped at the ceiling - so the guard is not in one place
+rem  only.
 rem
 rem  Step 3 is not a formality. A run of cats reads its .bat
 rem  files from a copy under %TEMP% - see cats-shadow.bat - and
@@ -95,10 +115,11 @@ rem
 rem    cats clean Wildcat virtio      one step alone
 rem    cats clean Wildcat gpu         one step alone
 rem    cats clean Wildcat restart     ask for a restart and nothing else
+rem    cats clean Wildcat background  the wallpaper, and nothing else
 rem    cats clean Wildcat autologon on|off   the automatic logon
 rem ============================================================
 
-set WC_CHAIN=clean Wildcat autologon on+install Drivers+update Scripts+clean Wildcat restart+clean Wildcat virtio+prepare Drivers infpack yes+clean Wildcat gpu+clean Wildcat restart+install Drivers+update Windows+install Drivers+clean Wildcat autologon off+prepare Machine+create Machine
+set WC_CHAIN=clean Wildcat autologon on+install Drivers+update Scripts+clean Wildcat restart+clean Wildcat virtio+prepare Drivers infpack yes+clean Wildcat gpu+clean Wildcat restart+install Drivers+update Windows+install Drivers+prepare Machine+create Machine+clean Wildcat background+clean Wildcat autologon off
 
 if /I "%~1"=="clean" (
 
@@ -149,6 +170,16 @@ if /I "%~1"=="clean" (
 		echo [36mRECIPE    : A restart here, so that what follows runs on the machine the steps above left [0m
 		call "%CATS_HOME%\cats-resume.bat" request
 		exit /b !errorlevel!
+	)
+
+	if /I "%~2"=="background" (
+		rem  The wallpaper, as a step of its own so that the chain can carry it. It
+		rem  comes after prepare Machine on purpose: whatever the BgInfo profile
+		rem  draws on it describes the machine as it will be delivered, with the
+		rem  name it keeps, and not the one it had while the posa was running
+		echo [36mRECIPE    : Setting the desktop background of this machine [0m
+		call "%CATS_HOME%\set-background.bat"
+		exit /b 0
 	)
 
 	if /I "%~2"=="virtio" (
@@ -204,12 +235,12 @@ if /I "%~1"=="clean" (
 
 	if not "%~2"=="" (
 		echo [31mERROR     : Wildcat has no step called %~2 [0m
-		echo [94mUSAGE     : cats clean Wildcat, or one step of it: virtio, gpu, restart [0m
+		echo [94mUSAGE     : cats clean Wildcat, or one step of it: virtio, gpu, restart, background, autologon [0m
 		exit /b 2
 	)
 
 	echo [36mRECIPE    : Turning this machine into a Wild Cat: %WC_CHAIN% [0m
-	echo [94mUSAGE     : it restarts on its own where it has to. Sign in as an administrator afterwards and it carries on [0m
+	echo [94mUSAGE     : it restarts on its own where it has to and signs itself back in: it needs nobody until it is done [0m
 	call "%CATS_HOME%\cats-resume.bat" open "clean Wildcat" "%WC_CHAIN%"
 	if errorlevel 2 (
 		echo [31mERROR     : the chain was not started, the lines above say why [0m
