@@ -16,22 +16,37 @@
 #  library is installed: a driver package that fits no device of
 #  this machine has no business in its driver store.
 #
+#  The matching itself lives in ps\lib-driver-ids.ps1, shared
+#  with asus-driver-fetch.ps1: the fetch has to know what this
+#  scan will consider unclaimed, or it stops with the catalogue
+#  still holding the one package the machine needed.
+#
 #  Parameters:
 #    -Path <folder>  the driver library, C:\Admin\Drivers by
 #                    default. The same folder the HPSA9 and
 #                    Nvidia recipes download into
 #    -Check          report only, install nothing
 #
-#  Exit codes: 0 a driver was installed (or, with -Check, a
-#  relevant one is available), 1 every device already has a
-#  working driver so there is nothing to do, 2 something failed
-#  and the reason is on the lines above, 3 devices need a driver
-#  and the library has nothing that fits them - that is the case
-#  where an operator has to go and fetch the package, 4 a driver
-#  was installed and pnputil asked for a restart before it is
-#  fully in charge. 4 is 0 with a restart pending, not a
-#  failure: it is what lets a caller chain the restart instead
-#  of leaving it to whoever reads the console.
+#  Exit codes: 0 a driver was installed and every device that
+#  needed one works now - with -Check, every device that needs
+#  one has a package here that claims it, 1 every device already
+#  has a working driver so there is nothing to do, 2 a package
+#  failed to install for a reason somebody has to read, 3 a
+#  device is still without a driver and the library has nothing
+#  that fits it - that is the case where the package has to be
+#  fetched, and -Check answers it without installing anything,
+#  4 a driver was installed and pnputil asked for a restart
+#  before it is fully in charge.
+#
+#  4 is asked BEFORE 2 and 3 on purpose. A restart pending is not
+#  a verdict on the run, it is a statement that the run is not
+#  over: the devices that are still unclaimed cannot be counted
+#  while three chipset packages are waiting for a restart to take
+#  charge, and a package that could not be installed at all does
+#  not change that. Until 2026-09-21 the failure was asked first,
+#  and three packages signed with an expired certificate - none
+#  of them a driver for any device of the machine - were enough
+#  to swallow the restart request and end the chain.
 #
 #  pnputil /add-driver ... /install needs an elevated prompt and
 #  Windows 10 1607 or later.
@@ -44,6 +59,8 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+
+. (Join-Path $PSScriptRoot 'lib-driver-ids.ps1')
 
 function Write-Recipe([string]$text) { Write-Host ("RECIPE    : " + $text) -ForegroundColor Cyan }
 function Write-Warn([string]$text)   { Write-Host ("WARNING   : " + $text) -ForegroundColor Yellow }
@@ -67,63 +84,21 @@ $needsDriver = @(1, 3, 10, 12, 14, 18, 19, 28, 31, 35, 37, 38, 39, 41, 48, 52)
 # unplugged, or waiting for a restart. Installing a driver at them would be noise.
 $notADriverProblem = @(21, 22, 24, 25, 26, 27, 29, 45, 47, 54)
 
-$idPattern = '(?i)\b(?:PCI|USB|USBPRINT|HID|ACPI|HDAUDIO|INTELAUDIO|SWC|SW|ROOT|SD|MMC|SCSI|IDE|UMB|BTH|BTHENUM|BTHLE|MONITOR|DISPLAY|PCMCIA|WSDPRINT|NET|VEN|WPDBUSENUM|UEFI)\\[A-Z0-9_&.\-+{}]{4,}'
-
-function Get-DeviceIds([string]$instanceId) {
-	$ids = @()
-	foreach ($key in @('DEVPKEY_Device_HardwareIds', 'DEVPKEY_Device_CompatibleIds')) {
-		try {
-			$property = Get-PnpDeviceProperty -InstanceId $instanceId -KeyName $key -ErrorAction Stop
-			if ($null -ne $property -and $null -ne $property.Data) { $ids += @($property.Data) }
-		} catch {
-			# A device may carry neither list; that is not a failure of the scan
-		}
-	}
-	return @($ids | Where-Object { $_ } | ForEach-Object { $_.ToString().Trim().ToUpperInvariant() } | Where-Object { $_.Length -gt 0 } | Select-Object -Unique)
-}
-
-function Get-DeviceProblem([string]$instanceId) {
-	try {
-		$property = Get-PnpDeviceProperty -InstanceId $instanceId -KeyName 'DEVPKEY_Device_ProblemCode' -ErrorAction Stop
-		if ($null -ne $property -and $null -ne $property.Data) { return [int]$property.Data }
-	} catch {
-		# Older builds do not expose the property; the caller treats -1 as "not known"
-	}
-	return -1
-}
-
-# The two ids match when they are the same id, or when one is the other cut short at a field
-# boundary - that is how Windows ranks a driver written for PCI\VEN_8086&DEV_A0F0 against a
-# device that enumerates as PCI\VEN_8086&DEV_A0F0&SUBSYS_89C61028&REV_11. The boundary matters:
-# a plain StartsWith would let PCI\VEN_8086&DEV_A0F match the device above and it is a
-# different part.
-function Test-IdMatch([string]$deviceId, [string]$infId) {
-	if ($infId.Length -lt 8 -or $deviceId.Length -lt 8) { return $false }
-	if ($deviceId -eq $infId) { return $true }
-	if ($deviceId.StartsWith($infId) -and $deviceId.Substring($infId.Length).StartsWith('&')) { return $true }
-	if ($infId.StartsWith($deviceId) -and $infId.Substring($deviceId.Length).StartsWith('&')) { return $true }
-	return $false
-}
-
-# The hardware ids are pulled out of the whole file rather than parsed section by section. An
-# inf is a small file and the ids are written in it literally; a real parser would have to
-# follow [Manufacturer] into its model sections, honour the decoration suffixes and resolve
-# %strings%, and it would buy nothing here - the question asked is "does this package know
-# about this device", not "which install section would Windows pick".
-function Get-InfIds([string]$file) {
-	try {
-		$text = Get-Content -LiteralPath $file -Raw -ErrorAction Stop
-	} catch {
-		Write-Warn "$file could not be read: $($_.Exception.Message)"
-		return @()
-	}
-	if ([string]::IsNullOrWhiteSpace($text)) { return @() }
-	$found = @()
-	foreach ($match in [regex]::Matches($text, $idPattern)) {
-		$found += $match.Value.Trim().TrimEnd(',', ';', '"').ToUpperInvariant()
-	}
-	return @($found | Select-Object -Unique)
-}
+# ---- pnputil results ----
+#
+# 3010 is the restart, 259 is ERROR_NO_MORE_ITEMS - pnputil says it when the call added no new
+# package to the store, which on a second pass is every package that was already staged by the
+# first one, not "no device wanted it": the same call prints "Driver package updated on device"
+# above the line it returns 259 on.
+# 0x800B0101 is CERT_E_EXPIRED. It is a package Windows will not stage at all, and no run of
+# this recipe can change that: the only way in would be to turn the signature enforcement of
+# the machine off, which is not something a posa does. The three packages that met it on
+# 2026-09-21 were an Intel DTT user interface marked "DO NOT DISTRIBUTE" and two copies of a
+# Wi-Fi special config that disables 802.11be - not a driver for any device on the board - so it
+# is named and stepped over instead of failing the run. Every other trust error stays a failure.
+$PNPUTIL_RESTART_NEEDED = 3010
+$PNPUTIL_NOTHING_ADDED = 259
+$CERT_E_EXPIRED = -2146762495
 
 # ---- 1. What does Windows say is broken ----
 
@@ -135,7 +110,13 @@ $needy = @()
 $otherProblem = 0
 $offOrUnplugged = 0
 foreach ($device in $devices) {
-	$problem = Get-DeviceProblem $device.InstanceId
+	$problem = -1
+	try {
+		$property = Get-PnpDeviceProperty -InstanceId $device.InstanceId -KeyName 'DEVPKEY_Device_ProblemCode' -ErrorAction Stop
+		if ($null -ne $property -and $null -ne $property.Data) { $problem = [int]$property.Data }
+	} catch {
+		# Older builds do not expose the property; -1 is "not known" and the device is kept
+	}
 	if ($notADriverProblem -contains $problem) { $offOrUnplugged++; continue }
 	if ($problem -ge 0 -and -not ($needsDriver -contains $problem)) {
 		$otherProblem++
@@ -178,35 +159,33 @@ if (-not (Test-Path -LiteralPath $Path)) {
 
 Write-Recipe "Reading the driver packages under $Path"
 
-$infFiles = @(Get-ChildItem -LiteralPath $Path -Filter '*.inf' -Recurse -File -ErrorAction SilentlyContinue)
-$packages = @(Get-ChildItem -LiteralPath $Path -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.Extension -match '^\.(exe|msi|zip|cab|7z)$' })
+$architecture = Get-HostArchitecture
+$library = Get-DriverMatches -Path $Path -Devices $needy -Architecture $architecture
 
-if ($infFiles.Count -eq 0) {
+if ($library.InfCount -eq 0) {
 	Write-Warn "no .inf file under $Path"
 } else {
-	Write-Recipe "$($infFiles.Count) .inf file(s) to check"
+	Write-Recipe "$($library.InfCount) .inf file(s) to check"
+}
+if ($library.OtherArchitecture -gt 0) {
+	Write-Recipe "$($library.OtherArchitecture) package(s) are for another architecture than $architecture and were left alone"
+}
+if ($library.Unreadable -gt 0) {
+	Write-Warn "$($library.Unreadable) .inf file(s) could not be read"
 }
 
-$relevant = @()
-foreach ($inf in $infFiles) {
-	$infIds = Get-InfIds $inf.FullName
-	if ($infIds.Count -eq 0) { continue }
-	$matched = @()
-	foreach ($device in $needy) {
-		foreach ($deviceId in $device.Ids) {
-			$hit = $false
-			foreach ($infId in $infIds) {
-				if (Test-IdMatch $deviceId $infId) { $hit = $true; break }
-			}
-			if ($hit) { $matched += $device.Name; break }
-		}
-	}
-	if ($matched.Count -gt 0) {
-		$relevant += [pscustomobject]@{ File = $inf.FullName; Devices = @($matched | Select-Object -Unique) }
-	}
+$packages = @(Get-ChildItem -LiteralPath $Path -Recurse -File -ErrorAction SilentlyContinue | Where-Object { $_.Extension -match '^\.(exe|msi|zip|cab|7z)$' })
+
+# Named before anything is installed, and named again at the end: this is the list that decides
+# whether there is still something to fetch, and an operator reading the console has to see it
+# whether or not the other devices were served
+if ($library.Uncovered.Count -gt 0) {
+	Write-Warn "$($library.Uncovered.Count) device(s) have nothing in $Path that claims them:"
+	foreach ($device in $library.Uncovered) { Write-Plain "$($device.Name) - $($device.InstanceId)" }
+	Write-Plain "cats prepare Drivers   asks the vendor catalogue for what is missing"
 }
 
-if ($relevant.Count -eq 0) {
+if ($library.Relevant.Count -eq 0) {
 	Write-Fail "nothing under $Path fits the device(s) above: the package has to be fetched from the vendor"
 	if ($packages.Count -gt 0) {
 		Write-Warn "$($packages.Count) vendor package(s) are sitting there unpacked; an operator runs those by hand:"
@@ -215,14 +194,15 @@ if ($relevant.Count -eq 0) {
 	exit 3
 }
 
-Write-Recipe "$($relevant.Count) driver package(s) fit this machine:"
-foreach ($item in $relevant) {
+Write-Recipe "$($library.Relevant.Count) driver package(s) fit this machine:"
+foreach ($item in $library.Relevant) {
 	Write-Plain "$($item.File)"
 	Write-Plain "    for: $($item.Devices -join ', ')"
 }
 
 if ($Check) {
 	Write-Recipe "Check only, nothing was installed"
+	if ($library.Uncovered.Count -gt 0) { exit 3 }
 	exit 0
 }
 
@@ -241,18 +221,24 @@ if ($elevated -eq $false) {
 }
 
 $installed = 0
+$alreadyThere = 0
+$skipped = 0
 $failed = 0
 $restart = $false
 
-foreach ($item in $relevant) {
+foreach ($item in $library.Relevant) {
 	Write-Recipe "Installing $($item.File)"
 	$output = & pnputil.exe /add-driver "$($item.File)" /install 2>&1
 	$code = $LASTEXITCODE
 	foreach ($line in @($output)) { Write-Plain ([string]$line) }
 	switch ($code) {
-		0     { $installed++ }
-		3010  { $installed++; $restart = $true }
-		259   { Write-Warn "the package was added to the driver store but matched no device on this machine" }
+		0                        { $installed++ }
+		$PNPUTIL_RESTART_NEEDED  { $installed++; $restart = $true }
+		$PNPUTIL_NOTHING_ADDED   { $alreadyThere++ }
+		$CERT_E_EXPIRED {
+			$skipped++
+			Write-Warn "this package is signed with a certificate that is no longer valid, so Windows will not stage it; stepped over"
+		}
 		default {
 			Write-Fail "pnputil returned $code for $($item.File)"
 			$failed++
@@ -260,35 +246,51 @@ foreach ($item in $relevant) {
 	}
 }
 
+Write-Recipe "$installed package(s) installed, $alreadyThere already in the driver store, $skipped stepped over, $failed failed"
+
 # Windows may have picked up a staged driver for a device other than the one it was matched
-# against, so the count that means something is the one taken after the fact, not before
-$still = 0
+# against, so the count that means something is the one taken after the fact, not before. It is
+# also the only honest answer to "did this work": a package handed to pnputil without a
+# complaint is not a device that works.
+$still = @()
 try {
 	foreach ($device in $needy) {
 		$after = Get-PnpDevice -InstanceId $device.InstanceId -ErrorAction SilentlyContinue
-		if ($null -ne $after -and $after.Status -ne 'OK') { $still++ }
+		if ($null -ne $after -and $after.Status -ne 'OK') { $still += $device }
 	}
-	Write-Recipe "$($needy.Count - $still) of $($needy.Count) device(s) are working now"
+	Write-Recipe "$($needy.Count - $still.Count) of $($needy.Count) device(s) are working now"
 } catch {
 	Write-Warn "the device state could not be read back: $($_.Exception.Message)"
 }
 
 if ($failed -gt 0) {
 	Write-Fail "$failed driver package(s) failed to install"
-	exit 2
-}
-if ($installed -eq 0) {
-	Write-Warn "nothing was installed: the relevant packages were staged but no device took them"
-	exit 3
 }
 
-Write-Recipe "$installed driver package(s) installed"
-
-# Asked after the failure and the nothing-installed cases, because a
-# restart pending on top of either of those says nothing useful
+# Asked first, and before the failure: see the head of this file
 if ($restart) {
 	Write-Warn "a restart is needed before the new driver is fully in charge"
 	exit 4
+}
+
+if ($failed -gt 0) { exit 2 }
+
+if ($still.Count -gt 0) {
+	Write-Warn "$($still.Count) device(s) still have no working driver:"
+	foreach ($device in $still) { Write-Plain "$($device.Name) - $($device.InstanceId)" }
+	Write-Plain "cats prepare Drivers   asks the vendor catalogue for what is missing"
+	if ($packages.Count -gt 0) {
+		Write-Warn "$($packages.Count) vendor package(s) are sitting there unpacked; an operator runs those by hand:"
+		foreach ($package in ($packages | Select-Object -First 10)) { Write-Plain $package.FullName }
+	}
+	exit 3
+}
+
+if ($installed -eq 0) {
+	# Every device works and nothing was installed to get there: a second pass after a restart,
+	# where the first one had already staged everything. Not a failure and not work.
+	Write-Recipe "Nothing was left to install: the packages were already in the driver store"
+	exit 1
 }
 
 exit 0

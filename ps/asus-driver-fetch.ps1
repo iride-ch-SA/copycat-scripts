@@ -4,7 +4,7 @@
 #  download catalogue, so that cats install Drivers has
 #  something to match the devices of this machine against.
 #
-#  Four steps, each of which can stop the run with its own exit
+#  Five steps, each of which can stop the run with its own exit
 #  code, because each of them can fail for a reason an operator
 #  has to read:
 #    1. is this an ASUS board at all, and what is its model? The
@@ -27,18 +27,37 @@
 #       unattended; an installer .exe inside the archive is left
 #       for the operator, as it already is for every other
 #       package in that folder
+#    5. is every device claimed now? The library is read back
+#       with the same matcher cats install Drivers uses, and a
+#       device that still has no package is the sign that the
+#       single packages of this catalogue do not hold its driver
+#       - which is where the family INF pack comes in, see below
 #
-#  The device test is deliberately wider than the one in
-#  driver-scan.ps1, which weighs problem codes one by one. It
+#  The device test of step 2 is deliberately wider than the one
+#  in driver-scan.ps1, which weighs problem codes one by one. It
 #  can afford to be: a false positive here costs a download, a
 #  false positive there would install a driver at a device that
-#  did not ask for one.
+#  did not ask for one. Step 5 uses the strict matcher of
+#  ps\lib-driver-ids.ps1, the one that decides what will actually
+#  be installed.
 #
-#  The catalogue endpoint is not documented by ASUS. It is what
-#  the ASUS support site itself calls, it answers without
-#  credentials, and it may change without notice - which is why
-#  every failure below names the model and the URL instead of
-#  just reporting that something went wrong.
+#  THE FAMILY INF PACK. The catalogue of a model holds single
+#  packages and, next to them, one archive of over a gigabyte
+#  with the drivers of the whole family in it. A posa does not
+#  wait for that by accident, so it is left out of the ordinary
+#  fetch - but it is not optional when it is the only thing that
+#  holds the driver of a device on this board. Measured
+#  2026-09-21 on a NUC15CRBC5: the catalogue of that model has no
+#  Audio group at all, and the multimedia audio controller of the
+#  board - Intel Smart Sound Technology - exists in the catalogue
+#  only inside NUC15CR_RPL-R_Driver_INF_Pack_ww45-2025, together
+#  with Intel RST, the I226 network adapter and CSME. No run
+#  without the pack could ever fix that device.
+#  So: when step 5 finds a device no package claims and the
+#  catalogue offers the pack, the pack is fetched, and the size
+#  ceiling does not apply to it - it is not an accident at that
+#  point, it is the answer. -NoInfPack refuses that, for a posa
+#  on a line that cannot afford it.
 #
 #  Parameters:
 #    -Path <folder>   the driver library, C:\Admin\Drivers by
@@ -54,11 +73,12 @@
 #    -MaxSizeMB <n>   skip anything larger, naming it and its
 #                     URL. 1024 by default: this catalogue holds
 #                     single packages of 1.6 GB, and a posa does
-#                     not wait for them by accident
-#    -InfPack         also take the family INF driver pack, the
-#                     one-click package of a whole NUC family.
-#                     Over a gigabyte, and it also needs
-#                     -MaxSizeMB raised
+#                     not wait for them by accident. It does not
+#                     apply to the family INF pack when that pack
+#                     is the only source of a missing driver
+#    -InfPack         take the family INF pack straight away,
+#                     without waiting for step 5 to ask for it
+#    -NoInfPack       never take it, whatever step 5 finds
 #    -All             every group and every device, whether or
 #                     not a device is missing anything - the
 #                     form for preparing a machine that is going
@@ -73,6 +93,10 @@
 #  is not an ASUS board or its model is not in the catalogue,
 #  which is the case where an operator has to go and fetch the
 #  package by hand.
+#  A device left unclaimed after all of this is named on the
+#  console but does not change the code: what was asked for here
+#  was to fill the library, and cats install Drivers is the step
+#  that reports a device without a driver.
 # ============================================================
 
 [CmdletBinding()]
@@ -82,6 +106,7 @@ param(
 	[int]$OsId = 52,
 	[int]$MaxSizeMB = 1024,
 	[switch]$InfPack,
+	[switch]$NoInfPack,
 	[switch]$All,
 	[switch]$Check,
 	[switch]$Force
@@ -89,17 +114,34 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+. (Join-Path $PSScriptRoot 'lib-driver-ids.ps1')
+
 function Write-Recipe([string]$text) { Write-Host ("RECIPE    : " + $text) -ForegroundColor Cyan }
 function Write-Warn([string]$text)   { Write-Host ("WARNING   : " + $text) -ForegroundColor Yellow }
 function Write-Fail([string]$text)   { Write-Host ("ERROR     : " + $text) -ForegroundColor Red }
 function Write-Plain([string]$text)  { Write-Host ("            " + $text) }
 
-function Expand-Zip([string]$archive, [string]$destination) {
+# tar.exe is bsdtar, part of Windows since 10 1803, and the only one of the three ways below
+# that survives a path longer than 260 characters. The Intel DTT package holds a release note
+# whose path under C:\Admin\Drivers is 270 characters long, and both .NET calls stopped on it on
+# 2026-09-21 with "could not find a part of the path", leaving the package half unpacked - the
+# kind of failure that ends with an .inf that is simply not there.
+function Expand-Package([string]$archive, [string]$destination) {
+	if (-not (Test-Path -LiteralPath $destination)) { New-Item -ItemType Directory -Path $destination -Force | Out-Null }
+	# Not Join-Path on $env:SystemRoot straight: an empty variable makes that call throw, and an
+	# unpacking must not be the thing that ends a run over a variable it only needed to guess a path
+	$tar = ''
+	if (-not [string]::IsNullOrWhiteSpace($env:SystemRoot)) { $tar = Join-Path $env:SystemRoot 'System32\tar.exe' }
+	if ($tar -and (Test-Path -LiteralPath $tar)) {
+		& $tar -x -f $archive -C $destination 2>&1 | Out-Null
+		if ($LASTEXITCODE -eq 0) { return }
+		Write-Warn "tar returned $LASTEXITCODE on $([IO.Path]::GetFileName($archive)), unpacking it the other way"
+	}
 	try {
 		Expand-Archive -LiteralPath $archive -DestinationPath $destination -Force -ErrorAction Stop
 	} catch {
-		# Expand-Archive is the readable form and fails on some large archives; the
-		# framework call underneath it does not
+		# Expand-Archive is the readable form and fails on some large archives; the framework
+		# call underneath it does not
 		Add-Type -AssemblyName System.IO.Compression.FileSystem -ErrorAction SilentlyContinue
 		[IO.Compression.ZipFile]::ExtractToDirectory($archive, $destination)
 	}
@@ -134,6 +176,8 @@ $classToGroups = @{
 	'SYSTEM'         = @('Chipset', 'Driver Package')
 }
 
+$root = Join-Path $Path 'ASUS'
+
 # ---- 1. Which machine is this ----
 
 if ([string]::IsNullOrWhiteSpace($Model)) {
@@ -165,6 +209,7 @@ if ([string]::IsNullOrWhiteSpace($Model)) {
 
 $wantedGroups = @()
 $fetchEverything = $false
+$needy = @()
 
 if ($All) {
 	Write-Recipe "Taking the whole catalogue, whatever this machine is missing"
@@ -192,6 +237,11 @@ if ($All) {
 			if ($null -ne $device.Class) { $class = ([string]$device.Class).Trim().ToUpperInvariant() }
 			$label = if ($class) { $class } else { 'no class' }
 			Write-Plain "$name - $label"
+			$needy += [pscustomobject]@{
+				Name       = $name
+				InstanceId = $device.InstanceId
+				Ids        = Get-DeviceIds $device.InstanceId
+			}
 			if ($class -and $classToGroups.ContainsKey($class)) {
 				$wantedGroups += $classToGroups[$class]
 			} else {
@@ -235,6 +285,7 @@ if ($null -eq $catalogue -or $null -eq $catalogue.Result -or $null -eq $catalogu
 }
 
 $candidates = @()
+$familyPack = $null
 $skippedBySize = @()
 $skippedGroups = 0
 
@@ -242,8 +293,10 @@ foreach ($group in @($catalogue.Result.Obj)) {
 	$groupName = ''
 	if ($null -ne $group.Name) { $groupName = ([string]$group.Name).Trim() }
 
-	if (-not $All -and ($notDriverGroups -contains $groupName)) { $skippedGroups++; continue }
-	if (-not $fetchEverything -and -not $All -and -not ($wantedGroups -contains $groupName)) { $skippedGroups++; continue }
+	$groupWanted = $true
+	if (-not $All -and ($notDriverGroups -contains $groupName)) { $groupWanted = $false }
+	if (-not $fetchEverything -and -not $All -and -not ($wantedGroups -contains $groupName)) { $groupWanted = $false }
+	if (-not $groupWanted) { $skippedGroups++ }
 
 	foreach ($file in @($group.Files)) {
 		$title = [string]$file.Title
@@ -253,98 +306,81 @@ foreach ($group in @($catalogue.Result.Obj)) {
 		# MyASUS and the like are listed with a Microsoft Store link instead of a file
 		if ([string]::IsNullOrWhiteSpace($link) -or $link -notmatch '(?i)\.zip(\?|$)') { continue }
 
-		# The family INF pack is a package of the whole family, over a gigabyte, and it is
-		# not what fills a library for one machine. Taken only when it is asked for.
-		if ($title -match '(?i)INF\s*(Driver\s*)?Pack' -and -not $InfPack) {
-			Write-Recipe "Leaving the family INF pack out: $title ($($file.FileSize))"
-			Write-Plain "cats prepare Drivers infpack max 2048   takes it instead"
-			continue
-		}
-
 		$sizeMB = 0.0
 		if ($file.FileSize -match '(?i)^\s*([\d.]+)\s*(KB|MB|GB)') {
-			$value = [double]$matches[1]
-			switch ($matches[2].ToUpperInvariant()) {
+			$value = [double]$Matches[1]
+			switch ($Matches[2].ToUpperInvariant()) {
 				'KB' { $sizeMB = $value / 1024 }
 				'MB' { $sizeMB = $value }
 				'GB' { $sizeMB = $value * 1024 }
 			}
 		}
-		if ($sizeMB -gt $MaxSizeMB) {
-			$skippedBySize += [pscustomobject]@{ Title = $title; Size = [string]$file.FileSize; Url = $link }
-			continue
-		}
 
-		$candidates += [pscustomobject]@{
+		$entry = [pscustomobject]@{
 			Group  = $groupName
 			Title  = $title
 			Size   = [string]$file.FileSize
+			SizeMB = $sizeMB
 			Url    = $link
 			Sha256 = ([string]$file.sha256).Trim().ToUpperInvariant()
 			Name   = [IO.Path]::GetFileName(($link -split '\?')[0])
 		}
+
+		# The family pack is kept aside whatever its group is: it is the fallback of step 5 and
+		# neither the group filter nor the size ceiling has anything to say about it there
+		if ($title -match '(?i)INF\s*(Driver\s*)?Pack') {
+			if ($null -eq $familyPack) { $familyPack = $entry }
+			continue
+		}
+
+		if (-not $groupWanted) { continue }
+		if ($sizeMB -gt $MaxSizeMB) {
+			$skippedBySize += $entry
+			continue
+		}
+		$candidates += $entry
 	}
 }
 
 if ($skippedGroups -gt 0) { Write-Recipe "$skippedGroups catalogue group(s) left out as not relevant here" }
+
+if ($null -ne $familyPack) {
+	if ($InfPack -and -not $NoInfPack) {
+		Write-Recipe "Taking the family INF pack as asked: $($familyPack.Title) ($($familyPack.Size))"
+		$candidates += $familyPack
+	} else {
+		Write-Recipe "Leaving the family INF pack out for now: $($familyPack.Title) ($($familyPack.Size))"
+		Write-Plain "it is fetched by itself if a device turns out to have nothing else that claims it"
+	}
+}
 
 if ($skippedBySize.Count -gt 0) {
 	Write-Warn "$($skippedBySize.Count) package(s) are larger than $MaxSizeMB MB and were left out; raise the ceiling, or fetch them by hand:"
 	foreach ($item in $skippedBySize) { Write-Plain "$($item.Title) ($($item.Size))"; Write-Plain "    $($item.Url)" }
 }
 
-if ($candidates.Count -eq 0) {
-	Write-Warn "the catalogue for $Model has nothing for what this machine is missing"
-	exit 3
-}
+# ---- 4. What is not already here, and fetching it ----
 
-# ---- 4. What is not already here ----
-
-$root = Join-Path $Path 'ASUS'
-$toFetch = @()
-foreach ($item in $candidates) {
+function Test-AlreadyFetched($item) {
 	$folder = Join-Path $root ([IO.Path]::GetFileNameWithoutExtension($item.Name))
 	$marker = Join-Path $folder '.asus-source.txt'
-	if (-not $Force -and (Test-Path -LiteralPath $marker)) {
-		$previous = ''
-		try { $previous = (Get-Content -LiteralPath $marker -Raw -ErrorAction Stop) } catch { }
-		# No sha256 published means the marker can only say "the same file name was unpacked
-		# here", which is still enough not to pull 900 MB down a second time
-		if ([string]::IsNullOrWhiteSpace($item.Sha256) -or $previous -match [regex]::Escape($item.Sha256)) {
-			Write-Recipe "Already in the library: $($item.Title)"
-			continue
-		}
-	}
-	$toFetch += [pscustomobject]@{ Item = $item; Folder = $folder; Marker = $marker }
+	if ($Force -or -not (Test-Path -LiteralPath $marker)) { return $null }
+	$previous = ''
+	try { $previous = (Get-Content -LiteralPath $marker -Raw -ErrorAction Stop) } catch { }
+	# No sha256 published means the marker can only say "the same file name was unpacked here",
+	# which is still enough not to pull 900 MB down a second time
+	if ([string]::IsNullOrWhiteSpace($item.Sha256) -or $previous -match [regex]::Escape($item.Sha256)) { return $marker }
+	return $null
 }
 
-if ($toFetch.Count -eq 0) {
-	Write-Recipe "Everything the catalogue offers for this machine is already under $root"
-	exit 1
-}
+# Returns $true when the package is in the library afterwards. One package at a time, because
+# the family pack of step 5 comes through here on its own, long after the others.
+function Get-CataloguePackage($item) {
+	$folder = Join-Path $root ([IO.Path]::GetFileNameWithoutExtension($item.Name))
+	$marker = Join-Path $folder '.asus-source.txt'
 
-Write-Recipe "$($toFetch.Count) package(s) to fetch:"
-foreach ($entry in $toFetch) { Write-Plain "$($entry.Item.Group) - $($entry.Item.Title) ($($entry.Item.Size))" }
-
-if ($Check) {
-	Write-Recipe "Check only, nothing was downloaded"
-	exit 0
-}
-
-try {
-	if (-not (Test-Path -LiteralPath $root)) { New-Item -ItemType Directory -Path $root -Force | Out-Null }
-} catch {
-	Write-Fail "$root could not be created: $($_.Exception.Message)"
-	exit 2
-}
-
-$fetched = 0
-$failed = 0
-
-foreach ($entry in $toFetch) {
-	$item = $entry.Item
-	# GetTempPath, not $env:TEMP: the variable is not set in every context a scheduled
-	# task runs a recipe from, and a null there stops the run with a binding error
+	# GetTempPath, not $env:TEMP: the variable is not set in every context a scheduled task runs
+	# a recipe from, and a null there stops the run with a binding error
 	$tempRoot = [IO.Path]::GetTempPath()
 	if ([string]::IsNullOrWhiteSpace($tempRoot)) { $tempRoot = $root }
 	$temp = Join-Path $tempRoot $item.Name
@@ -365,8 +401,7 @@ foreach ($entry in $toFetch) {
 	} catch {
 		Write-Fail "$($item.Title) could not be downloaded: $($_.Exception.Message)"
 		Write-Plain $link
-		$failed++
-		continue
+		return $false
 	}
 
 	if (-not [string]::IsNullOrWhiteSpace($item.Sha256)) {
@@ -377,22 +412,20 @@ foreach ($entry in $toFetch) {
 			Write-Plain "expected $($item.Sha256)"
 			Write-Plain "got      $actual"
 			Remove-Item -LiteralPath $temp -Force -ErrorAction SilentlyContinue
-			$failed++
-			continue
+			return $false
 		}
 	}
 
 	# Unpacked, not left as a .zip: cats install Drivers installs .inf packages and can only
 	# name an archive to the operator
 	try {
-		if (Test-Path -LiteralPath $entry.Folder) { Remove-Item -LiteralPath $entry.Folder -Recurse -Force -ErrorAction SilentlyContinue }
-		New-Item -ItemType Directory -Path $entry.Folder -Force | Out-Null
-		Expand-Zip $temp $entry.Folder
+		if (Test-Path -LiteralPath $folder) { Remove-Item -LiteralPath $folder -Recurse -Force -ErrorAction SilentlyContinue }
+		New-Item -ItemType Directory -Path $folder -Force | Out-Null
+		Expand-Package $temp $folder
 	} catch {
 		Write-Fail "$($item.Name) could not be unpacked: $($_.Exception.Message)"
 		Remove-Item -LiteralPath $temp -Force -ErrorAction SilentlyContinue
-		$failed++
-		continue
+		return $false
 	}
 
 	# Some of these packages hold another archive rather than the driver itself - the GNA
@@ -400,12 +433,12 @@ foreach ($entry in $toFetch) {
 	# cats install Drivers cannot see. Unpacked in place until no archive is left, with a
 	# ceiling on the rounds so that a zip that somehow contains itself does not spin here.
 	for ($round = 1; $round -le 3; $round++) {
-		$inner = @(Get-ChildItem -LiteralPath $entry.Folder -Filter '*.zip' -Recurse -File -ErrorAction SilentlyContinue)
+		$inner = @(Get-ChildItem -LiteralPath $folder -Filter '*.zip' -Recurse -File -ErrorAction SilentlyContinue)
 		if ($inner.Count -eq 0) { break }
 		foreach ($archive in $inner) {
 			$target = Join-Path $archive.DirectoryName ([IO.Path]::GetFileNameWithoutExtension($archive.Name))
 			try {
-				Expand-Zip $archive.FullName $target
+				Expand-Package $archive.FullName $target
 				Remove-Item -LiteralPath $archive.FullName -Force -ErrorAction SilentlyContinue
 			} catch {
 				Write-Warn "$($archive.Name) is inside $($item.Name) and could not be unpacked: $($_.Exception.Message)"
@@ -423,28 +456,141 @@ foreach ($entry in $toFetch) {
 		"sha256 : $($item.Sha256)",
 		"fetched: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
 	)
-	try { Set-Content -LiteralPath $entry.Marker -Value $lines -Encoding ASCII -ErrorAction Stop } catch {
+	try { Set-Content -LiteralPath $marker -Value $lines -Encoding ASCII -ErrorAction Stop } catch {
 		Write-Warn "the marker file could not be written, so this package will be fetched again next time"
 	}
 	Remove-Item -LiteralPath $temp -Force -ErrorAction SilentlyContinue
 
-	$infCount = @(Get-ChildItem -LiteralPath $entry.Folder -Filter '*.inf' -Recurse -File -ErrorAction SilentlyContinue).Count
+	$infCount = @(Get-ChildItem -LiteralPath $folder -Filter '*.inf' -Recurse -File -ErrorAction SilentlyContinue).Count
 	if ($infCount -gt 0) {
-		Write-Recipe "$($item.Title): $infCount .inf file(s) under $($entry.Folder)"
+		Write-Recipe "$($item.Title): $infCount .inf file(s) under $folder"
 	} else {
 		Write-Warn "$($item.Title) holds no .inf file: cats install Drivers will name it, an operator runs it"
 	}
-	$fetched++
+	return $true
 }
 
-if ($fetched -eq 0) {
+$toFetch = @()
+foreach ($item in $candidates) {
+	if ($null -ne (Test-AlreadyFetched $item)) {
+		Write-Recipe "Already in the library: $($item.Title)"
+		continue
+	}
+	$toFetch += $item
+}
+
+if ($candidates.Count -eq 0 -and $null -eq $familyPack) {
+	Write-Warn "the catalogue for $Model has nothing for what this machine is missing"
+	exit 3
+}
+
+$fetched = 0
+$failed = 0
+# -Check fetches nothing, so the verdict cannot be read off $fetched: this is what it would have taken
+$wouldFetch = ($toFetch.Count -gt 0)
+
+if ($toFetch.Count -gt 0) {
+	Write-Recipe "$($toFetch.Count) package(s) to fetch:"
+	foreach ($item in $toFetch) { Write-Plain "$($item.Group) - $($item.Title) ($($item.Size))" }
+} else {
+	if ($candidates.Count -eq 0) {
+		Write-Recipe "This catalogue has no single package for what this machine is missing"
+	} else {
+		Write-Recipe "Everything the catalogue offers for this machine is already under $root"
+	}
+}
+
+if ($Check) {
+	Write-Recipe "Check only, nothing was downloaded"
+} else {
+	if ($toFetch.Count -gt 0) {
+		try {
+			if (-not (Test-Path -LiteralPath $root)) { New-Item -ItemType Directory -Path $root -Force | Out-Null }
+		} catch {
+			Write-Fail "$root could not be created: $($_.Exception.Message)"
+			exit 2
+		}
+		foreach ($item in $toFetch) {
+			if (Get-CataloguePackage $item) { $fetched++ } else { $failed++ }
+		}
+	}
+}
+
+# ---- 5. Is every device claimed now ----
+#
+# The library is read with the matcher cats install Drivers will use, so that what is measured
+# here is what will happen there. A device nothing claims is the one case where the family INF
+# pack earns its gigabyte.
+
+$uncovered = @()
+if ($needy.Count -gt 0) {
+	Write-Recipe "Checking what in $Path claims those devices"
+	if ($Check -and $toFetch.Count -gt 0) {
+		# The packages above were not downloaded, so this is the library without them and it can
+		# well name a device the ordinary fetch would have covered
+		Write-Plain "the packages listed above are not here yet, so this is the library without them"
+	}
+	$architecture = Get-HostArchitecture
+	$library = Get-DriverMatches -Path $Path -Devices $needy -Architecture $architecture
+	$uncovered = @($library.Uncovered)
+
+	if ($uncovered.Count -gt 0 -and $null -ne $familyPack -and -not $NoInfPack -and -not (Test-AlreadyFetched $familyPack)) {
+		Write-Warn "$($uncovered.Count) device(s) have nothing in $Path that claims them:"
+		foreach ($device in $uncovered) { Write-Plain "$($device.Name) - $($device.InstanceId)" }
+		Write-Recipe "The single packages of this catalogue do not hold their driver, so the family pack is taken:"
+		Write-Plain "$($familyPack.Title) ($($familyPack.Size)) - the size ceiling does not apply to it here"
+		Write-Plain "cats prepare Drivers noinfpack   refuses this, for a line that cannot afford it"
+
+		if ($Check) {
+			$wouldFetch = $true
+			Write-Recipe "Check only, nothing was downloaded"
+		} else {
+			try {
+				if (-not (Test-Path -LiteralPath $root)) { New-Item -ItemType Directory -Path $root -Force | Out-Null }
+			} catch {
+				Write-Fail "$root could not be created: $($_.Exception.Message)"
+				exit 2
+			}
+			if (Get-CataloguePackage $familyPack) { $fetched++ } else { $failed++ }
+			$library = Get-DriverMatches -Path $Path -Devices $needy -Architecture $architecture
+			$uncovered = @($library.Uncovered)
+		}
+	}
+
+	if ($uncovered.Count -eq 0) {
+		Write-Recipe "Every device that needs a driver now has a package in $Path that claims it"
+	} elseif ($Check) {
+		# A -Check run downloaded nothing, so a device unclaimed here is not a verdict on the
+		# catalogue: it is the library as it stands, without everything listed above
+		Write-Recipe "$($uncovered.Count) device(s) are claimed by nothing here yet, and nothing was fetched: run it without check to find out"
+	} else {
+		Write-Warn "$($uncovered.Count) device(s) are still claimed by nothing in ${Path}:"
+		foreach ($device in $uncovered) { Write-Plain "$($device.Name) - $($device.InstanceId)" }
+		Write-Plain "the catalogue of $Model does not hold their driver: the vendor of the part does"
+		if ($skippedBySize.Count -gt 0) {
+			Write-Plain "these were left out by the size ceiling and are the only candidates left here:"
+			foreach ($item in $skippedBySize) { Write-Plain "    $($item.Title) ($($item.Size))" }
+		}
+	}
+}
+
+# The verdict of a -Check run is about what it found, not about what it did: it did nothing
+if ($Check) {
+	if ($wouldFetch) { exit 0 }
+	exit 1
+}
+
+if ($failed -gt 0 -and $fetched -eq 0) {
 	Write-Fail "no package could be added to the library"
 	exit 2
 }
 if ($failed -gt 0) {
 	Write-Warn "$failed package(s) failed; $fetched were added to $root"
-} else {
-	Write-Recipe "$fetched package(s) added to $root"
+	exit 0
+}
+if ($fetched -eq 0) {
+	exit 1
 }
 
+Write-Recipe "$fetched package(s) added to $root"
 exit 0

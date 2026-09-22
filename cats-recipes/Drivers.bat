@@ -44,7 +44,21 @@ rem    cats prepare Drivers force           fetch again what is already there
 rem    cats prepare Drivers noinstall       fetch only, do not offer to install
 rem    cats prepare Drivers model <sku>     ask the catalogue for another model name
 rem    cats prepare Drivers max <mb>        raise the size ceiling, 1024 MB by default
-rem    cats prepare Drivers infpack max 2048   take the family INF pack instead
+rem    cats prepare Drivers infpack         take the family INF pack straight away
+rem    cats prepare Drivers noinfpack       never take it, whatever is missing
+rem
+rem  The family INF pack is the archive of over a gigabyte that
+rem  holds the drivers of a whole NUC family. It is not fetched
+rem  with the rest, because a posa does not wait for it by
+rem  accident - but once the single packages are unpacked the
+rem  library is read back with the same matcher cats install
+rem  Drivers uses, and a device that nothing claims sends the
+rem  fetch after the pack, size ceiling or not. That is not a
+rem  nicety: measured 2026-09-21, the catalogue of a NUC15CRBC5
+rem  has no Audio group at all and the driver of its multimedia
+rem  audio controller exists there only inside the pack, so
+rem  without this the machine ends a posa without audio and with
+rem  a console saying every package was installed.
 rem
 rem  A driver that asks for a restart before it is fully in
 rem  charge does not restart the machine here: cats-resume.bat is
@@ -52,6 +66,15 @@ rem  told that a restart is needed, and the chain this recipe is
 rem  part of orders it once it has written down what is left. Run
 rem  by hand, outside a chain, nothing restarts and the machine
 rem  is left for the operator to restart.
+rem
+rem  The restart is asked for even when a package failed to
+rem  install. A restart pending is not a verdict on the run, it
+rem  says the run is not over - and until 2026-09-21 a failure
+rem  was read first, so three packages signed with an expired
+rem  certificate, none of them a driver for any device of the
+rem  machine, were enough to swallow the restart and end the
+rem  chain with five devices of six working. What failed is
+rem  named on the console either way.
 rem
 rem  Exit codes: 0 a driver was installed, 1 every device already
 rem  had a working driver, 2 an installation failed, 3 a device
@@ -85,6 +108,7 @@ if /I "%~1"=="install" (
 	)
 	if errorlevel 3 (
 		echo [33mWARNING   : A device needs a driver and %DRV_DIR% has nothing that fits it, see the lines above [0m
+		echo [94mUSAGE     : cats prepare Drivers   asks the vendor catalogue for it, family INF pack included [0m
 		exit /b 3
 	)
 	if errorlevel 2 (
@@ -92,7 +116,7 @@ if /I "%~1"=="install" (
 		exit /b 2
 	)
 	if errorlevel 1 (
-		echo [36mRECIPE    : No driver was needed on this machine [0m
+		echo [36mRECIPE    : Nothing to install: every device on this machine has a working driver [0m
 		exit /b 1
 	)
 
@@ -158,6 +182,7 @@ if /I "%~1"=="check"     ( set PRP_ARGS=!PRP_ARGS! -Check )
 if /I "%~1"=="all"       ( set PRP_ARGS=!PRP_ARGS! -All )
 if /I "%~1"=="force"     ( set PRP_ARGS=!PRP_ARGS! -Force )
 if /I "%~1"=="infpack"   ( set PRP_ARGS=!PRP_ARGS! -InfPack )
+if /I "%~1"=="noinfpack" ( set PRP_ARGS=!PRP_ARGS! -NoInfPack )
 if /I "%~1"=="noinstall" ( set PRP_ASK=0 )
 if /I "%~1"=="model"     ( set PRP_ARGS=!PRP_ARGS! -Model '%~2'& shift )
 if /I "%~1"=="max"       ( set PRP_ARGS=!PRP_ARGS! -MaxSizeMB %~2& shift )
