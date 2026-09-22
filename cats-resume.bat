@@ -61,6 +61,14 @@ rem
 rem  Exit codes: 0 the chain is finished or there was nothing to
 rem  do, 2 the marker could not be written or the task could not
 rem  be registered, 3 the chain was stopped at the cycle ceiling.
+rem
+rem  The ceiling is twelve restarts, raised from eight on
+rem  2026-09-22: cats clean Wildcat now asks for two of its own -
+rem  one so that the recipes it just pulled are the ones it goes
+rem  on with, one so that the devices the new drivers brought up
+rem  are enumerated - and a fresh image can want four or five for
+rem  Windows Update alone. The ceiling is there to stop a machine
+rem  that would never settle, not to stop a posa that is working.
 rem ============================================================
 
 set RESUME_DIR=C:\Admin\Others
@@ -68,7 +76,7 @@ set RESUME_STATE=C:\Admin\Others\resume.state
 set RESUME_FLAG=C:\Admin\Others\resume.reboot
 set RESUME_TASK=Resume cats chain
 set RESUME_SELF=%CATS_ROOT%\cats-resume.bat
-set RESUME_MAXCYCLE=8
+set RESUME_MAXCYCLE=12
 set RESUME_WAIT=20
 
 if /I "%~1"=="open" (

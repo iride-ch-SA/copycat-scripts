@@ -42,6 +42,7 @@ rem    cats prepare Drivers check           report only, fetch nothing
 rem    cats prepare Drivers all             whole catalogue, not just what is missing
 rem    cats prepare Drivers force           fetch again what is already there
 rem    cats prepare Drivers noinstall       fetch only, do not offer to install
+rem    cats prepare Drivers yes             install straight away, without asking
 rem    cats prepare Drivers model <sku>     ask the catalogue for another model name
 rem    cats prepare Drivers max <mb>        raise the size ceiling, 1024 MB by default
 rem    cats prepare Drivers infpack         the family pack INSTEAD of the single packages
@@ -67,6 +68,13 @@ rem  very version the pack already carries. It is the form for
 rem  one download and no more - not the form for the most recent
 rem  driver of every part, because three singles are newer than
 rem  what the pack holds. The plain run is the up to date one.
+rem
+rem  The prompt between the two has a default and a timeout, so a
+rem  chain nobody is watching goes on by itself after thirty
+rem  seconds - but thirty seconds of a posa spent on a question
+rem  nobody will answer is thirty seconds wasted, and the console
+rem  reads as if it were waiting for somebody. In a chain, where
+rem  the answer is known when the chain is written, use "yes".
 rem
 rem  A driver that asks for a restart before it is fully in
 rem  charge does not restart the machine here: cats-resume.bat is
@@ -167,12 +175,17 @@ if /I "%~1"=="prepare" (
 	)
 
 	rem  Default yes, and a timeout so that a chain that nobody is watching goes on
-	rem  by itself rather than waiting for a key that is never pressed
-	echo.
-	choice /c YN /n /t 30 /d Y /m "Install the drivers now with cats install Drivers? [Y/n] "
-	if errorlevel 2 (
-		echo [92mDONE     [96m : Drivers fetched into %DRV_DIR%, not installed[0m
-		exit /b 0
+	rem  by itself rather than waiting for a key that is never pressed. "yes" skips the
+	rem  question altogether: in a chain the answer was decided when the chain was written
+	if "!PRP_ASK!"=="2" (
+		echo [36mRECIPE    : Installing what was fetched, without asking [0m
+	) else (
+		echo.
+		choice /c YN /n /t 30 /d Y /m "Install the drivers now with cats install Drivers? [Y/n] "
+		if errorlevel 2 (
+			echo [92mDONE     [96m : Drivers fetched into %DRV_DIR%, not installed[0m
+			exit /b 0
+		)
 	)
 
 	call "%CATS_HOME%\cats-recipes\Drivers.bat" install
@@ -192,6 +205,7 @@ if /I "%~1"=="force"     ( set PRP_ARGS=!PRP_ARGS! -Force )
 if /I "%~1"=="infpack"   ( set PRP_ARGS=!PRP_ARGS! -InfPack )
 if /I "%~1"=="noinfpack" ( set PRP_ARGS=!PRP_ARGS! -NoInfPack )
 if /I "%~1"=="noinstall" ( set PRP_ASK=0 )
+if /I "%~1"=="yes"       ( set PRP_ASK=2 )
 if /I "%~1"=="model"     ( set PRP_ARGS=!PRP_ARGS! -Model '%~2'& shift )
 if /I "%~1"=="max"       ( set PRP_ARGS=!PRP_ARGS! -MaxSizeMB %~2& shift )
 shift

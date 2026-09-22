@@ -152,15 +152,33 @@ function Get-HostArchitecture {
 	}
 }
 
+# The library is read once per file and kept: cats install Drivers now walks it several times in
+# one run - a bus driver in charge enumerates children that were not there a minute earlier - and
+# the library does not change between those passes. A thousand .inf files re-read four times is
+# the kind of cost nobody sees until a posa waits for it.
+$script:InfFactsCache = @{}
+
 function Get-InfFacts([string]$file) {
+	# Keyed by size and write time as well as by path: cats prepare Drivers force re-fetches a
+	# package over the one that is there, and the same path can hold a different file between two
+	# calls of the same run
+	$key = $file
+	try {
+		$info = Get-Item -LiteralPath $file -ErrorAction Stop
+		$key = "$file|$($info.Length)|$($info.LastWriteTimeUtc.Ticks)"
+	} catch {
+		# Unreadable here means unreadable below too, and the path alone will do as a key
+	}
+	if ($script:InfFactsCache.ContainsKey($key)) { return $script:InfFactsCache[$key] }
 	$facts = [pscustomobject]@{ File = $file; Ids = @(); Decorations = @(); IsExtension = $false; Read = $false }
 	$text = ''
 	try {
 		$text = Get-Content -LiteralPath $file -Raw -ErrorAction Stop
 	} catch {
+		$script:InfFactsCache[$key] = $facts
 		return $facts
 	}
-	if ([string]::IsNullOrWhiteSpace($text)) { return $facts }
+	if ([string]::IsNullOrWhiteSpace($text)) { $script:InfFactsCache[$key] = $facts; return $facts }
 	$facts.Read = $true
 	$found = @()
 	foreach ($match in [regex]::Matches($text, $script:InfIdPattern)) {
@@ -169,6 +187,7 @@ function Get-InfFacts([string]$file) {
 	$facts.Ids = @($found | Select-Object -Unique)
 	$facts.Decorations = Get-InfDecorations $text
 	$facts.IsExtension = Test-InfIsExtension $text
+	$script:InfFactsCache[$key] = $facts
 	return $facts
 }
 
