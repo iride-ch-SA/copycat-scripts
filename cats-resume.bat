@@ -229,6 +229,10 @@ if !RS_CYCLE! GTR %RESUME_MAXCYCLE% (
 	echo [31mERROR     : %RESUME_MAXCYCLE% restarts were not enough for chain "!RS_ORIGIN!", it is stopped here [0m
 	echo [94mUSAGE     : what is left: !RS_CHAIN!. Continue it with cats resume, or drop it with cats resume cancel [0m
 	call :write
+	rem  The marker is kept here on purpose, so the chain can be continued by hand -
+	rem  but nobody is going to continue it by itself, so the machine must not go on
+	rem  signing itself in while it waits
+	call :autologon-off
 	call :unregister
 	exit /b 3
 )
@@ -334,7 +338,33 @@ exit /b 0
 :clear
 if exist "%RESUME_STATE%" del /f /q "%RESUME_STATE%" >nul 2>&1
 if exist "%RESUME_FLAG%" del /f /q "%RESUME_FLAG%" >nul 2>&1
+call :autologon-off
 call :unregister
+exit /b 0
+
+rem ============================================================
+rem  A chain that is over must not leave the machine signing
+rem  itself in. cats clean Wildcat switches the automatic logon
+rem  on for its own restarts and off as its last step, but a
+rem  chain can also end cancelled, or stopped at the ceiling, or
+rem  with a step that never reached the end - and a machine that
+rem  leaves for a client signing itself in as an administrator is
+rem  the one outcome of this that would really matter. So the
+rem  runner switches it off too, wherever a chain stops being a
+rem  chain. Quiet when there was nothing to switch off, which is
+rem  the ordinary case: this runs at every sign in that finds no
+rem  chain waiting.
+rem ============================================================
+
+:autologon-off
+if not exist "%CATS_ROOT%\ps\set-autologon.ps1" exit /b 0
+powershell -noprofile -executionpolicy bypass -command "& %CATS_ROOT%\ps\set-autologon.ps1 -Mode off; exit $LASTEXITCODE" >nul 2>&1
+if errorlevel 2 (
+	echo [33mWARNING   : the automatic logon could not be switched off, check it before this machine leaves [0m
+	exit /b 0
+)
+if errorlevel 1 exit /b 0
+echo [36mRECIPE    : the automatic logon was still on and has been switched off [0m
 exit /b 0
 
 rem ============================================================

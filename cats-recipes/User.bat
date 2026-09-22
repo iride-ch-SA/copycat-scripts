@@ -2,6 +2,13 @@
 setlocal
 
 rem  CATS_ROOT is where cats is installed, see cats-shadow.bat
+rem
+rem  The calls to set-user-password.ps1 carry "; exit $LASTEXITCODE": without that tail
+rem  powershell -command flattens every non zero code to 1, and that helper answers 3
+rem  for a refusal of its own - PowerShell transcription is enabled by policy, so a
+rem  generated password shown on screen would be written to the transcript file. Read
+rem  as 1 that refusal is indistinguishable from any other failure, and the operator is
+rem  told the password could not be set without being told what to change.
 if not defined CATS_ROOT set "CATS_ROOT=C:\Admin\Scripts"
 
 if /I "%~1"=="create" (
@@ -56,12 +63,20 @@ if /I "%~1"=="create" (
 
 	if /I "%~3"=="ask" (
 		echo [36mRECIPE    : Create the user, the password is typed without being shown [0m
-		powershell -noprofile -executionpolicy bypass -command %CATS_ROOT%\ps\set-user-password.ps1 "%~2" ask -create
+		powershell -noprofile -executionpolicy bypass -command "& %CATS_ROOT%\ps\set-user-password.ps1 '%~2' ask -create; exit $LASTEXITCODE"
+		if errorlevel 3 (
+			echo [33mWARNING   : the password was not set: PowerShell transcription is enabled by policy, see above [0m
+			exit /b 3
+		)
 		if errorlevel 1 exit /b 1
 	) else (
 		if /I "%~3"=="random" (
 			echo [36mRECIPE    : Create the user with a generated password [0m
-			powershell -noprofile -executionpolicy bypass -command %CATS_ROOT%\ps\set-user-password.ps1 "%~2" random -create
+			powershell -noprofile -executionpolicy bypass -command "& %CATS_ROOT%\ps\set-user-password.ps1 '%~2' random -create; exit $LASTEXITCODE"
+			if errorlevel 3 (
+				echo [33mWARNING   : the password was not set: PowerShell transcription is enabled by policy, see above [0m
+				exit /b 3
+			)
 			if errorlevel 1 exit /b 1
 		) else (
 			echo [33mWARNING   : The password is on the command line and any process listing can read it. Use ask or random instead [0m
@@ -136,14 +151,22 @@ if /I "%~1"=="clean" (
 
 	if /I "%~3"=="ask" (
 		echo [36mRECIPE    : Password typed without being shown, account enabled and without expiration date [0m
-		powershell -noprofile -executionpolicy bypass -command %CATS_ROOT%\ps\set-user-password.ps1 "%~2" ask
+		powershell -noprofile -executionpolicy bypass -command "& %CATS_ROOT%\ps\set-user-password.ps1 '%~2' ask; exit $LASTEXITCODE"
+		if errorlevel 3 (
+			echo [33mWARNING   : the password was not set: PowerShell transcription is enabled by policy, see above [0m
+			exit /b 3
+		)
 		if errorlevel 1 exit /b 1
 		exit /b 0
 	)
 
 	if /I "%~3"=="random" (
 		echo [36mRECIPE    : New random password, account enabled and without expiration date [0m
-		powershell -noprofile -executionpolicy bypass -command %CATS_ROOT%\ps\set-user-password.ps1 "%~2" random
+		powershell -noprofile -executionpolicy bypass -command "& %CATS_ROOT%\ps\set-user-password.ps1 '%~2' random; exit $LASTEXITCODE"
+		if errorlevel 3 (
+			echo [33mWARNING   : the password was not set: PowerShell transcription is enabled by policy, see above [0m
+			exit /b 3
+		)
 		if errorlevel 1 exit /b 1
 		exit /b 0
 	)

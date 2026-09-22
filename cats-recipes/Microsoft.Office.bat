@@ -6,7 +6,7 @@ rem  CATS_ROOT is where cats is installed, see cats-shadow.bat
 if not defined CATS_ROOT set "CATS_ROOT=C:\Admin\Scripts"
 if not defined CATS_HOME set "CATS_HOME=%CATS_ROOT%"
 
-if "%~1"=="install" (
+if /I "%~1"=="install" (
 	winget list --id Microsoft.Office --accept-source-agreements | find /I "Microsoft 365 Apps for enterprise" > nul
 	if !errorlevel! NEQ 0 (
 		call "%CATS_HOME%\cats-install-winget.bat" Microsoft.OfficeDeploymentTool --silent
@@ -36,7 +36,7 @@ if "%~1"=="install" (
 	)
 )
 
-if "%~1"=="update" (
+if /I "%~1"=="update" (
 	rem Aggiornamento della suite gia installata
 	if not exist "C:\Program Files\Common Files\Microsoft Shared\ClickToRun\OfficeC2RClient.exe" (
 		echo [31mERROR     : OfficeC2RClient.exe not found, Office is not a Click-to-Run installation[0m

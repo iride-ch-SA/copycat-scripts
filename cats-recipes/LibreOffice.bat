@@ -48,7 +48,7 @@ rem at an upgrade the user cannot perform anyway; `cats install LibreOffice` is 
 
 set LO_DIR=C:\Admin\Installers\LibreOffice
 
-if "%~1"=="install" (
+if /I "%~1"=="install" (
 	if not exist "%LO_DIR%" ( mkdir "%LO_DIR%" )
 
 	set LO_ARGS=
@@ -81,16 +81,16 @@ if "%~1"=="install" (
 	powershell -noprofile -executionpolicy bypass -command %CATS_ROOT%\ps\libreoffice-lookup.ps1 !LO_ARGS! > "!LO_LOG!" 2>&1
 
 	for /f "usebackq tokens=1,* delims==" %%k in ("!LO_LOG!") do (
-		if "%%k"=="ERROR" ( set "LO_ERR=%%l" )
-		if "%%k"=="VERSION" ( set "LO_VER=%%l" )
-		if "%%k"=="LANG" ( set "LO_LANG=%%l" )
-		if "%%k"=="UILANGS" ( set "LO_UILANGS=%%l" )
-		if "%%k"=="FILE" ( set "LO_FILE=%%l" )
-		if "%%k"=="URL" ( set "LO_URL=%%l" )
-		if "%%k"=="RELPATH" ( set "LO_RELPATH=%%l" )
-		if "%%k"=="HELPFILE" ( set "LO_HELPFILE=%%l" )
-		if "%%k"=="HELPURL" ( set "LO_HELPURL=%%l" )
-		if "%%k"=="OSUICULTURE" ( set "LO_OSUI=%%l" )
+		if /I "%%k"=="ERROR" ( set "LO_ERR=%%l" )
+		if /I "%%k"=="VERSION" ( set "LO_VER=%%l" )
+		if /I "%%k"=="LANG" ( set "LO_LANG=%%l" )
+		if /I "%%k"=="UILANGS" ( set "LO_UILANGS=%%l" )
+		if /I "%%k"=="FILE" ( set "LO_FILE=%%l" )
+		if /I "%%k"=="URL" ( set "LO_URL=%%l" )
+		if /I "%%k"=="RELPATH" ( set "LO_RELPATH=%%l" )
+		if /I "%%k"=="HELPFILE" ( set "LO_HELPFILE=%%l" )
+		if /I "%%k"=="HELPURL" ( set "LO_HELPURL=%%l" )
+		if /I "%%k"=="OSUICULTURE" ( set "LO_OSUI=%%l" )
 	)
 
 	if not "!LO_ERR!"=="" (
@@ -119,7 +119,7 @@ if "%~1"=="install" (
 	set LO_HAVE=
 	powershell -noprofile -executionpolicy bypass -command "!LO_FIND!" > "!LO_STATE!" 2>&1
 	for /f "usebackq tokens=1,* delims==" %%k in ("!LO_STATE!") do (
-		if "%%k"=="INSTALLED" ( set "LO_HAVE=%%l" )
+		if /I "%%k"=="INSTALLED" ( set "LO_HAVE=%%l" )
 	)
 
 	if not "!LO_HAVE!"=="" (
@@ -145,7 +145,7 @@ if "%~1"=="install" (
 
 	set LO_SOURCE=
 	for /f "usebackq tokens=1,* delims==" %%k in ("!LO_FETCHLOG!") do (
-		if "%%k"=="SOURCE" ( set "LO_SOURCE=%%l" )
+		if /I "%%k"=="SOURCE" ( set "LO_SOURCE=%%l" )
 	)
 
 	if not exist "!LO_MSI!" (
@@ -200,7 +200,7 @@ if "%~1"=="install" (
 
 		set LO_HELPMISS=
 		for /f "usebackq tokens=1,* delims==" %%k in ("!LO_HELPLOG!") do (
-			if "%%k"=="MISSING" ( set "LO_HELPMISS=1" )
+			if /I "%%k"=="MISSING" ( set "LO_HELPMISS=1" )
 		)
 
 		if exist "!LO_HELPMSI!" (

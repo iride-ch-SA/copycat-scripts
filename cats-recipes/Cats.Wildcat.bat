@@ -71,14 +71,52 @@ rem  commands of this recipe, because a chain is made of things
 rem  that can be typed after cats and picked up again after a
 rem  restart.
 rem
-rem    cats clean Wildcat virtio    step 4 alone
-rem    cats clean Wildcat gpu       step 6 alone
-rem    cats clean Wildcat restart   ask for a restart and nothing else
+rem    cats clean Wildcat virtio      one step alone
+rem    cats clean Wildcat gpu         one step alone
+rem    cats clean Wildcat restart     ask for a restart and nothing else
+rem    cats clean Wildcat autologon on|off   the automatic logon
 rem ============================================================
 
-set WC_CHAIN=install Drivers+update Scripts+clean Wildcat restart+clean Wildcat virtio+prepare Drivers infpack yes+clean Wildcat gpu+clean Wildcat restart+install Drivers+update Windows+install Drivers
+set WC_CHAIN=clean Wildcat autologon on+install Drivers+update Scripts+clean Wildcat restart+clean Wildcat virtio+prepare Drivers infpack yes+clean Wildcat gpu+clean Wildcat restart+install Drivers+update Windows+install Drivers+clean Wildcat autologon off
 
 if /I "%~1"=="clean" (
+
+	if /I "%~2"=="autologon" (
+		rem  The automatic logon is what makes a chain of ten steps and several
+		rem  restarts run without somebody signing in at each one. It is switched on
+		rem  as the first step and off as the last, and cats-resume switches it off
+		rem  again whenever a chain ends, however it ends - a machine that leaves for
+		rem  a client signing itself in as an administrator is the one outcome of
+		rem  this that would really matter.
+		rem  The account is itadmin and its password is the one in
+		rem  config\autounattend.xml, in this repository on purpose: it is the default
+		rem  every machine starts from, and the operator changes it BY HAND at the end
+		rem  of the procedure. That change is deliberately not automated - a generated
+		rem  password set by a chain nobody is watching is a password nobody can read
+		rem  back, and the machine is lost.
+		rem  Best effort by construction: if the logon does not happen - a wrong
+		rem  password, an ActiveSync policy - the chain is not lost, it waits for an
+		rem  administrator to sign in as it did before this existed.
+		if /I "%~3"=="off" (
+			powershell -noprofile -executionpolicy bypass -command "& %CATS_ROOT%\ps\set-autologon.ps1 -Mode off; exit $LASTEXITCODE"
+			if errorlevel 2 (
+				echo [31mERROR     : the automatic logon could not be switched off, check it before this machine leaves [0m
+				exit /b 2
+			)
+			exit /b 0
+		)
+		powershell -noprofile -executionpolicy bypass -command "& %CATS_ROOT%\ps\set-autologon.ps1 -Mode on; exit $LASTEXITCODE"
+		if errorlevel 3 (
+			echo [33mWARNING   : Autologon is not installed, so every restart of this chain will wait for a sign in [0m
+			echo [94mUSAGE     : cats install Cats.Utils puts it in C:\Admin\Apps, and the image is where it belongs [0m
+			exit /b 0
+		)
+		if errorlevel 2 (
+			echo [33mWARNING   : the automatic logon is not on, so every restart of this chain will wait for a sign in [0m
+			exit /b 0
+		)
+		exit /b 0
+	)
 
 	if /I "%~2"=="restart" (
 		rem  A step of the chain whose whole work is to end the run: what comes

@@ -1,7 +1,15 @@
+[CmdletBinding()]
 param(
 	[switch]$check,
 	[switch]$quiet
 )
+
+# An unhandled error used to leave the caller with a bare exit code and no reason to
+# read. Every helper of this repository answers the same way since 2026-09-22.
+trap {
+	Write-Host ("ERROR     : windows-update failed: " + $_.Exception.Message + " [line " + $_.InvocationInfo.ScriptLineNumber + "]") -ForegroundColor Red
+	exit 2
+}
 
 # ============================================================
 #  windows-update.ps1

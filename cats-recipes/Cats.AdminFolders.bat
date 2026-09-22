@@ -1,6 +1,6 @@
 @echo off
 
-if "%~1"=="prepare" (
+if /I "%~1"=="prepare" (
 	echo [36mRECIPE    : Preparing/Upgrading C:\Admin folder structure [0m
 	if not exist "C:\Admin" ( mkdir C:\Admin )
 	if exist "C:\Admin" ( 

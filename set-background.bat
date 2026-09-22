@@ -4,7 +4,7 @@ rem  CATS_HOME is the copy this run reads its .bat files from, see cats-shadow.b
 if not defined CATS_HOME set "CATS_HOME=C:\Admin\Scripts"
 echo [96m----- Set Background Script[0m [92mSTARTED[0m [96m-----[0m 
 
-if "%~1"=="get" (
+if /I "%~1"=="get" (
 	IF NOT EXIST "C:\Admin\Others\background.jpg" (
 		if "%~2"=="" (
 			echo [36mDownloading default cats background[0m
@@ -18,7 +18,7 @@ if "%~1"=="get" (
 	)
 )
 
-if "%~1"=="remove" (
+if /I "%~1"=="remove" (
 	IF EXIST "C:\Admin\Others\background.jpg" (
 		del C:\Admin\Others\background.jpg
 	)

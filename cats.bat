@@ -44,35 +44,35 @@ if "%~2"=="" (
 call "%CATS_HOME%\cats-winget-accept.bat"
 
 :: Executing cats verbs and parameters
-if "%~1"=="install" (
+if /I "%~1"=="install" (
 	call "%CATS_HOME%\cats-install.bat" %2 %3 %4 %5 %6 %7 %8 %9
 )
 
-if "%~1"=="uninstall" (
+if /I "%~1"=="uninstall" (
 	echo [36mCALLING   : cats-uninstall %2 %3 %4 %5 %6 %7 %8 %9 [0m
 )
 
-if "%~1"=="update" (
+if /I "%~1"=="update" (
 	call "%CATS_HOME%\cats-update.bat" %2 %3 %4 %5 %6 %7 %8 %9
 )
 
-if "%~1"=="prepare" (
+if /I "%~1"=="prepare" (
 	call "%CATS_HOME%\cats-prepare.bat" %2 %3 %4 %5 %6 %7 %8 %9
 )
 
-if "%~1"=="clean" (
+if /I "%~1"=="clean" (
 	call "%CATS_HOME%\cats-clean.bat" %2 %3 %4 %5 %6 %7 %8 %9
 )
 
-if "%~1"=="set" (
+if /I "%~1"=="set" (
 	echo [36mCALLING   : cats-set %2 %3 %4 %5 %6 %7 %8 %9 [0m
 )
 
-if "%~1"=="create" (
+if /I "%~1"=="create" (
 	call "%CATS_HOME%\cats-create.bat" %2 %3 %4 %5 %6 %7 %8 %9
 )
 
-if "%~1"=="deploy" (
+if /I "%~1"=="deploy" (
 	call "%CATS_HOME%\cats-deploy.bat" %2 %3 %4 %5 %6 %7 %8 %9
 )
 
@@ -80,7 +80,7 @@ if /I "%~1"=="resume" (
 	call "%CATS_HOME%\cats-resume.bat" %2 %3 %4 %5 %6 %7 %8 %9
 )
 
-if "%~1"=="backup" (
+if /I "%~1"=="backup" (
 	echo [36mCALLING   : cats-backup %2 %3 %4 %5 %6 %7 %8 %9 [0m
 	call "%CATS_HOME%\cats-backup.bat" %2 %3 %4 %5 %6 %7 %8 %9
 )

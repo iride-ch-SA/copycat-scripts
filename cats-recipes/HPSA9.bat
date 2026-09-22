@@ -20,7 +20,7 @@ rem made the setup refuse the machine with "this version of HP Support Assistant
 rem incompatible with the operating system in use" - field test of 2026-08-13. Do not rename
 rem the file and do not split the run in two steps.
 
-if "%~1"=="install" (
+if /I "%~1"=="install" (
 	if not exist "C:\Admin\Drivers\HP" ( mkdir C:\Admin\Drivers\HP )
 
 	if not exist "%HPSA_EXE%" (

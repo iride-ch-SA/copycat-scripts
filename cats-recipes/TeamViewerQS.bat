@@ -3,7 +3,7 @@
 rem  CATS_HOME is the copy this run reads its .bat files from, see cats-shadow.bat
 if not defined CATS_HOME set "CATS_HOME=C:\Admin\Scripts"
 
-if "%~1"=="install" (
+if /I "%~1"=="install" (
 	if not exist "C:\Admin\Apps" ( mkdir C:\Admin\Apps )
 
 	echo [36mRECIPE    : Downloading TeamViewer QuickSupport [0m

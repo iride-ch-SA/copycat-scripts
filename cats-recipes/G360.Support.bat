@@ -1,6 +1,6 @@
 @echo off
 
-if "%~1"=="install" (
+if /I "%~1"=="install" (
 	echo [36mRECIPE    : Downloading G360 Support Software [0m
 	powershell -command "(new-object System.Net.WebClient).DownloadFile('https://storage.googleapis.com/01931185-232c-77a5-8e67-8751490ebf3e/SupportoIT/supportoit.exe','C:\Admin\Apps\supportoit.exe')"
 	

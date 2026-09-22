@@ -6,13 +6,24 @@ if not defined CATS_HOME set "CATS_HOME=C:\Admin\Scripts"
 
 echo [95mSTARTING [96m : CopyCat Install[0m
 
+rem  A recipe recognised on this command line takes the words that follow it: they are
+rem  its arguments and the recipe was already handed all of them, so they must not be
+rem  offered to winget as package ids of their own. cats install Drivers check asked for
+rem  a check of the Drivers recipe and used to ask winget for a package called "check"
+rem  as well - harmless only because cats-install-winget.bat installs nothing unless the
+rem  search returns exactly one match. Several packages on one line still work, because
+rem  there no recipe is ever recognised: cats install Chrome Firefox VLC is unchanged.
+set catsRecipeTaken=0
+
 for %%a in (%*) do (
 	:: Cats Recipes
 	if exist "%CATS_HOME%\cats-recipes\%%a.bat" ( 
 		call "%CATS_HOME%\cats-recipes\%%a.bat" install %2 %3 %4 %5 %6 %7 %8 %9
+		set catsRecipeTaken=1
 	) else (
 		if exist "%CATS_HOME%\cats-recipes\Cats.%%a.bat" (
 			call "%CATS_HOME%\cats-recipes\Cats.%%a.bat" install %2 %3 %4 %5 %6 %7 %8 %9
+			set catsRecipeTaken=1
 		) else (
 			set isShortCut=0
 			:: WinGet ShortCuts
@@ -37,8 +48,12 @@ for %%a in (%*) do (
 			)
 			
 			if !isShortCut! EQU 0 (
-				echo [33mWARNING   : Package %%a not found as copycat recipe, trying to pass directly to winget [0m
-				call "%CATS_HOME%\cats-install-winget.bat" %%a
+				if !catsRecipeTaken! EQU 1 (
+					echo [36mRECIPE    : %%a is read as an argument of the recipe above, not as a package [0m
+				) else (
+					echo [33mWARNING   : Package %%a not found as copycat recipe, trying to pass directly to winget [0m
+					call "%CATS_HOME%\cats-install-winget.bat" %%a
+				)
 			)
 		)
 	)

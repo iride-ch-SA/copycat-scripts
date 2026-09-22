@@ -9,23 +9,39 @@ if not defined CATS_HOME set "CATS_HOME=%CATS_ROOT%"
 set MC_CHAIN=clean disks+clean tmp+clean win-updates+clean dism-online+clean sfc
 
 if /I "%~1"=="create" (
-	
-	echo [32mRECIPE    : Executing HID Generator [0m
-	if "%~2"=="" (
-		powershell -noprofile -executionpolicy bypass -command %CATS_ROOT%\ps\hid-generator.ps1
-	) else (
-		SET PARAM="%~2"
-		powershell -noprofile -executionpolicy bypass -command %CATS_ROOT%\ps\hid-generator.ps1 "!PARAM!"
+
+	rem  The identifier is computed ONCE, and the same value is shown and written. Until
+	rem  2026-09-22 this block ran the helper twice - once to print and once to capture -
+	rem  so console and file were two answers to the same question, and nothing guaranteed
+	rem  they agreed.
+	rem  THERE IS NO SALT. hid-generator.ps1 declares -Verbose and nothing else, so a
+	rem  second word typed after Machine went into $args and was dropped in silence,
+	rem  the script having no CmdletBinding attribute to refuse it. The branch that
+	rem  pretended to pass it is gone, and the word is named instead of ignored.
+	rem  Adding a salt is a change to the helper, not to this line.
+	if not "%~2"=="" (
+		echo [33mWARNING   : cats create Machine takes no second parameter, and %~2 is ignored [0m
+		echo [94mUSAGE     : the identifier has no salt; run ps\hid-generator.ps1 -v to see what goes into it [0m
 	)
-	
-	echo [32mRECIPE    : Writing HID to C:\Admin\Others\HID.txt [0m
-	for /f "delims=" %%i in ('powershell -noprofile -executionpolicy bypass -command "%CATS_ROOT%\ps\hid-generator.ps1"') do set HID=%%i
-	
+
+	echo [32mRECIPE    : Executing HID Generator [0m
+	set "HID="
+	for /f "delims=" %%i in ('powershell -noprofile -executionpolicy bypass -command "& %CATS_ROOT%\ps\hid-generator.ps1"') do set "HID=%%i"
+	if not defined HID (
+		echo [31mERROR     : the hardware identifier could not be computed, the lines above say why [0m
+		exit /b 2
+	)
+	echo [36mRECIPE    : HID !HID! [0m
+
 	if not exist "C:\Admin\Others" (
 		mkdir "C:\Admin\Others"
 	)
-	
-	echo !HID! > "C:\Admin\Others\HID.txt"
+
+	rem  Redirection first, and on purpose: with the redirection written after echo, the
+	rem  space before it would be written to the file too, and a value ending in a digit
+	rem  would turn that digit into a stream number
+	> "C:\Admin\Others\HID.txt" echo !HID!
+	echo [32mRECIPE    : Written to C:\Admin\Others\HID.txt [0m
 
 	exit /b 0
 )

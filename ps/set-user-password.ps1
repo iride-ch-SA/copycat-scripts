@@ -1,3 +1,4 @@
+[CmdletBinding()]
 param(
 	[string]$username,
 	[ValidateSet("ask", "random")]
@@ -6,6 +7,13 @@ param(
 	[switch]$force,
 	[int]$length = 16
 )
+
+# An unhandled error used to leave the caller with a bare exit code and no reason to
+# read. Every helper of this repository answers the same way since 2026-09-22.
+trap {
+	Write-Host ("ERROR     : set-user-password failed: " + $_.Exception.Message + " [line " + $_.InvocationInfo.ScriptLineNumber + "]") -ForegroundColor Red
+	exit 1
+}
 
 # ============================================================
 #  set-user-password.ps1

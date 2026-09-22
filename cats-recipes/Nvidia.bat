@@ -38,7 +38,7 @@ rem   cats install nvidia "NVIDIA RTX PRO 2000 Blackwell"
 
 set NV_DIR=C:\Admin\Drivers\Nvidia
 
-if "%~1"=="install" (
+if /I "%~1"=="install" (
 	if not exist "%NV_DIR%" ( mkdir "%NV_DIR%" )
 
 	set NV_ARGS=
@@ -68,13 +68,13 @@ if "%~1"=="install" (
 	powershell -noprofile -executionpolicy bypass -command %CATS_ROOT%\ps\nvidia-driver-lookup.ps1 !NV_ARGS! > "!NV_LOG!" 2>&1
 
 	for /f "usebackq tokens=1,* delims==" %%k in ("!NV_LOG!") do (
-		if "%%k"=="ERROR" ( set "NV_ERR=%%l" )
-		if "%%k"=="GPU" ( set "NV_GPU=%%l" )
-		if "%%k"=="SERIES" ( set "NV_SERIES=%%l" )
-		if "%%k"=="VERSION" ( set "NV_VER=%%l" )
-		if "%%k"=="SIZE" ( set "NV_SIZE=%%l" )
-		if "%%k"=="FILE" ( set "NV_FILE=%%l" )
-		if "%%k"=="URL" ( set "NV_URL=%%l" )
+		if /I "%%k"=="ERROR" ( set "NV_ERR=%%l" )
+		if /I "%%k"=="GPU" ( set "NV_GPU=%%l" )
+		if /I "%%k"=="SERIES" ( set "NV_SERIES=%%l" )
+		if /I "%%k"=="VERSION" ( set "NV_VER=%%l" )
+		if /I "%%k"=="SIZE" ( set "NV_SIZE=%%l" )
+		if /I "%%k"=="FILE" ( set "NV_FILE=%%l" )
+		if /I "%%k"=="URL" ( set "NV_URL=%%l" )
 	)
 
 	if not "!NV_GPU!"=="" ( echo [36mRECIPE    : !NV_GPU! [0m )
@@ -171,10 +171,10 @@ if "%~1"=="install" (
 	powershell -noprofile -executionpolicy bypass -command %CATS_ROOT%\ps\nvidia-app-lookup.ps1 > "!NV_APPLOG!" 2>&1
 
 	for /f "usebackq tokens=1,* delims==" %%k in ("!NV_APPLOG!") do (
-		if "%%k"=="ERROR" ( set "NV_APPERR=%%l" )
-		if "%%k"=="APPVERSION" ( set "NV_APPVER=%%l" )
-		if "%%k"=="APPFILE" ( set "NV_APPFILE=%%l" )
-		if "%%k"=="APPURL" ( set "NV_APPURL=%%l" )
+		if /I "%%k"=="ERROR" ( set "NV_APPERR=%%l" )
+		if /I "%%k"=="APPVERSION" ( set "NV_APPVER=%%l" )
+		if /I "%%k"=="APPFILE" ( set "NV_APPFILE=%%l" )
+		if /I "%%k"=="APPURL" ( set "NV_APPURL=%%l" )
 	)
 
 	if not "!NV_APPERR!"=="" (

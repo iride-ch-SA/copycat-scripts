@@ -3,17 +3,23 @@
 rem  CATS_HOME is the copy this run reads its .bat files from, see cats-shadow.bat
 if not defined CATS_HOME set "CATS_HOME=C:\Admin\Scripts"
 
-if "%~1"=="install" (
+if /I "%~1"=="install" (
 	echo [32mRECIPE    : Install Cats Utilities [0m
 	if exist "%CATS_HOME%\cats-recipes\BgInfo.bat" ( 
 		call "%CATS_HOME%\cats-recipes\BgInfo.bat" install
 	)
-	if exist "%CATS_HOME%\cats-recipes\Acronis.Agent.bat" ( 
-		call "%CATS_HOME%\cats-recipes\Acronis.Agent.bat" install
-	)
+	rem  Acronis.Agent is no longer part of the utilities of a machine: it is not
+	rem  used any more. The recipe stays where it is for the machines that still
+	rem  want it, and cats install Acronis.Agent still works.
+	rem  Autologon takes its place, and it belongs in the image rather than in the
+	rem  deployment that uses it: the first restart cats clean Wildcat asks for can
+	rem  happen before that machine has a network, and a tool to be downloaded then
+	rem  is a tool that is not there. No set-permissions for it, unlike BgInfo:
+	rem  BgInfo runs at the logon of every user, Autologon is for an administrator.
+	call "%CATS_HOME%\cats-install-winget.bat" Microsoft.Sysinternals.Autologon --location C:\Admin\Apps\ 
 )
 
-if "%~1"=="prepare" (
+if /I "%~1"=="prepare" (
 	echo [32mRECIPE    : Prepare Cats Utilities [0m
 	
 	echo [32mRECIPE    : Create a cleanmgr sageset:1, select from GUI the clean settings to be saved [0m
