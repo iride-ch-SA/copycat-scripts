@@ -60,13 +60,14 @@ exit /b 2
 
 rem ============================================================
 rem  prepare gives the machine a random name, PC- followed by 9
-rem  characters drawn from A-Z0-9, and reboots it at once: that
-rem  is what Rename-Computer -Restart does, and it is what the
-rem  rename-pc.bat script in the root used to do before this
-rem  recipe took it over.
-rem  THE REBOOT IS IMMEDIATE AND UNCONFIRMED. cats-prepare.bat
-rem  iterates over every parameter it is given, so anything
-rem  typed after Machine on the same line does not run.
+rem  characters drawn from A-Z0-9. The name takes effect at the
+rem  next restart, and the restart is ASKED FOR, not ordered:
+rem  until 2026-09-22 this used Rename-Computer -Restart and
+rem  rebooted on the spot, which took away both whatever was
+rem  typed after Machine on the same line and any chain this
+rem  step belonged to - cats-resume registers the task that
+rem  picks a chain up only when it is the one ordering the
+rem  restart. It is now a step cats clean Wildcat can carry.
 rem  The name travels in the environment rather than inside the
 rem  quotes of -command, the same way the account name does in
 rem  User.bat. Rename-Computer fails without an elevated prompt,
@@ -84,13 +85,25 @@ for /l %%i in (1,1,9) do (
 )
 
 set "CATS_NEWNAME=PC-!randomName!"
-echo [36mRECIPE    : Renaming this machine to !CATS_NEWNAME! - it reboots as soon as the name is written [0m
-powershell -noprofile -executionpolicy bypass -command "try { Rename-Computer -NewName $env:CATS_NEWNAME -Restart -ErrorAction Stop } catch { Write-Error $_; exit 1 }"
+echo [36mRECIPE    : Renaming this machine to !CATS_NEWNAME! [0m
+
+rem  The restart is NOT ordered here any more, and that is what lets this step
+rem  be part of a chain. Rename-Computer -Restart reboots the machine on the
+rem  spot: cats-prepare.bat would lose whatever was typed after Machine on the
+rem  same line, and a chain would lose its own runner, because cats-resume
+rem  registers the task that picks the chain up only when IT orders a restart.
+rem  So the name is written and a restart is asked for, the way every other
+rem  step of this repository asks - see cats-recipes\Drivers.bat and, since
+rem  2026-09-22, cats clean win-updates. Typed by hand, outside a chain,
+rem  nothing restarts: the name is pending and the console says so.
+powershell -noprofile -executionpolicy bypass -command "try { Rename-Computer -NewName $env:CATS_NEWNAME -ErrorAction Stop } catch { Write-Error $_; exit 1 }"
 if errorlevel 1 (
-	echo [31mERROR     : the machine was not renamed, and it is not rebooting [0m
+	echo [31mERROR     : the machine was not renamed [0m
 	exit /b 1
 )
 
+echo [33mWARNING   : the new name takes effect at the next restart [0m
+call "%CATS_HOME%\cats-resume.bat" request
 exit /b 0
 
 rem ============================================================

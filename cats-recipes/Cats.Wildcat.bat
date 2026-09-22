@@ -48,6 +48,27 @@ rem   10. cats install Drivers          - once more: Windows
 rem       Update installs drivers of its own and brings devices
 rem       up with them, and a pass that finds nothing to do says
 rem       so and costs one enumeration
+rem   11. cats clean Wildcat autologon off - and from here on the
+rem       machine asks for a sign in again
+rem   12. cats prepare Machine          - the random name, which
+rem       takes effect at the restart it asks for
+rem   13. cats create Machine           - the hardware identifier,
+rem       written last and therefore taken on the machine as it
+rem       will be delivered
+rem
+rem  The last two are last, and in this order, on purpose. The
+rem  rename wants a restart, and it comes AFTER the automatic
+rem  logon is off so that nothing has to auto sign in with a name
+rem  that has just changed underneath it - the stored logon
+rem  carries the name the machine had when it was configured. The
+rem  operator signs in once after that restart, which is the same
+rem  visit in which they change the itadmin password by hand, and
+rem  the identifier is computed then, on the finished machine.
+rem  Worth knowing: the identifier does NOT depend on the machine
+rem  name - it is the BIOS serial, the processor id, the MAC
+rem  addresses and the serial numbers of memory and disks - so
+rem  this order is a matter of procedure, not of arithmetic. What
+rem  IS of substance is that it comes after the last restart.
 rem
 rem  Step 3 is not a formality. A run of cats reads its .bat
 rem  files from a copy under %TEMP% - see cats-shadow.bat - and
@@ -77,7 +98,7 @@ rem    cats clean Wildcat restart     ask for a restart and nothing else
 rem    cats clean Wildcat autologon on|off   the automatic logon
 rem ============================================================
 
-set WC_CHAIN=clean Wildcat autologon on+install Drivers+update Scripts+clean Wildcat restart+clean Wildcat virtio+prepare Drivers infpack yes+clean Wildcat gpu+clean Wildcat restart+install Drivers+update Windows+install Drivers+clean Wildcat autologon off
+set WC_CHAIN=clean Wildcat autologon on+install Drivers+update Scripts+clean Wildcat restart+clean Wildcat virtio+prepare Drivers infpack yes+clean Wildcat gpu+clean Wildcat restart+install Drivers+update Windows+install Drivers+clean Wildcat autologon off+prepare Machine+create Machine
 
 if /I "%~1"=="clean" (
 
