@@ -6,7 +6,7 @@ rem  CATS_ROOT is where cats is installed, see cats-shadow.bat
 if not defined CATS_ROOT set "CATS_ROOT=C:\Admin\Scripts"
 if not defined CATS_HOME set "CATS_HOME=%CATS_ROOT%"
 
-set MC_CHAIN=clean disks+clean tmp+clean win-updates+clean sfc+clean dism-online
+set MC_CHAIN=clean disks+clean tmp+clean win-updates+clean dism-online+clean sfc
 
 if /I "%~1"=="create" (
 	
@@ -78,13 +78,13 @@ if errorlevel 1 (
 exit /b 0
 
 rem ============================================================
-rem  clean runs the maintenance of the machine itself, in the
-rem  order it was asked for:
+rem  clean runs the maintenance of the machine itself, in this
+rem  order:
 rem    1. cats clean disks        cleanmgr with the sagerun:1 set
 rem    2. cats clean tmp          the logs and the temporary files
 rem    3. cats clean win-updates  the Windows Update folder
-rem    4. cats clean sfc          sfc /scannow
-rem    5. cats clean dism-online  the component store
+rem    4. cats clean dism-online  the component store
+rem    5. cats clean sfc          sfc /scannow
 rem
 rem  The five are shortcuts of cats-clean.bat and every one of
 rem  them can still be typed on its own: what this verb adds is
@@ -95,12 +95,13 @@ rem  the store is rebuilt, and a chain is what survives it.
 rem  Whoever signs in as an administrator afterwards picks it up
 rem  without typing anything.
 rem
-rem  Note on the order, which is the one that was asked for and
-rem  is not the one Microsoft documents for a repair: DISM
-rem  /RestoreHealth mends the component store sfc /scannow
-rem  repairs from, so a machine where sfc reports corruption it
-rem  could not correct wants the two run again the other way
-rem  round, dism-online first.
+rem  Note on the order of the last two, dism-online before sfc:
+rem  DISM /RestoreHealth mends the component store sfc /scannow
+rem  repairs from, so the store is sound before sfc reads it -
+rem  which is the order Microsoft documents for a repair. The
+rem  series was first written the other way round on 2026-09-22
+rem  and reversed the same day, so sfc is not left reporting
+rem  corruption it could not correct.
 rem
 rem  Exit codes: 0 the chain was opened, 2 it was not - another
 rem  chain is pending and was kept, or the marker could not be
@@ -112,7 +113,7 @@ rem ============================================================
 :clean-machine
 if not "%~1"=="" (
 	echo [31mERROR     : Machine has no clean step called %~1 [0m
-	echo [94mUSAGE     : cats clean Machine, or one step of it on its own: disks, tmp, win-updates, sfc, dism-online [0m
+	echo [94mUSAGE     : cats clean Machine, or one step of it on its own: disks, tmp, win-updates, dism-online, sfc [0m
 	exit /b 2
 )
 
