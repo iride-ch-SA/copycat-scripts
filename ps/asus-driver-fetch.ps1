@@ -27,11 +27,15 @@
 #       unattended; an installer .exe inside the archive is left
 #       for the operator, as it already is for every other
 #       package in that folder
-#    5. is every device claimed now? The library is read back
+#    5. is every device served now? The library is read back
 #       with the same matcher cats install Drivers uses, and a
 #       device that still has no package is the sign that the
 #       single packages of this catalogue do not hold its driver
-#       - which is where the family INF pack comes in, see below
+#       - which is where the family INF pack comes in, see below.
+#       An extension .inf claiming the device does not count: it
+#       adds settings to a driver and is not one, and taking it
+#       for one is how a posa ends with the device still dead
+#       and the console saying everything is claimed
 #
 #  The device test of step 2 is deliberately wider than the one
 #  in driver-scan.ps1, which weighs problem codes one by one. It
@@ -76,8 +80,15 @@
 #                     not wait for them by accident. It does not
 #                     apply to the family INF pack when that pack
 #                     is the only source of a missing driver
-#    -InfPack         take the family INF pack straight away,
-#                     without waiting for step 5 to ask for it
+#    -InfPack         take the family INF pack INSTEAD of the
+#                     single packages: one download of over a
+#                     gigabyte rather than a dozen, which on this
+#                     catalogue is 1.11 GB against some 3.3 GB.
+#                     The pack is not a superset of the singles -
+#                     three of them are newer than what it
+#                     carries - so this is the form for a posa
+#                     that wants one download, not the form for
+#                     the most recent driver of every part
 #    -NoInfPack       never take it, whatever step 5 finds
 #    -All             every group and every device, whether or
 #                     not a device is missing anything - the
@@ -150,6 +161,26 @@ function Expand-Package([string]$archive, [string]$destination) {
 trap {
 	Write-Fail "asus-driver-fetch failed: $($_.Exception.Message) [line $($_.InvocationInfo.ScriptLineNumber)]"
 	exit 2
+}
+
+# The size in the catalogue is not the size of the file. Measured 2026-09-22 on NUC15CRBC5:
+# "Intel Graphics V101.5972" is published as 1.99 MB and the server answers Content-Length
+# 1 060 326 703, that is 1011 MB - a zip holding one nested zip with graphics 101.6452 in it,
+# the same driver the 948 MB Arc package carries. A posa fetched both, some two gigabytes
+# announced as one, and the ceiling that exists to stop exactly that never saw them. So the
+# ceiling is applied to what the server says, and the catalogue figure is only what is printed
+# when the server does not answer.
+function Get-RemoteSizeMB([string]$url) {
+	try {
+		$response = Invoke-WebRequest -Uri ($url -replace ' ', '%20') -Method Head -UseBasicParsing -TimeoutSec 30 -ErrorAction Stop
+		$length = $response.Headers['Content-Length']
+		if ($length -is [array]) { $length = $length[0] }
+		if ([string]::IsNullOrWhiteSpace([string]$length)) { return -1 }
+		return ([double]$length) / 1MB
+	} catch {
+		# Not an error of the run: the declared size is used instead, and the download still happens
+		return -1
+	}
 }
 
 # Windows PowerShell 5.1 still defaults to protocols dlcdnets.asus.com will not talk
@@ -284,6 +315,20 @@ if ($null -eq $catalogue -or $null -eq $catalogue.Result -or $null -eq $catalogu
 	exit 3
 }
 
+# infpack means the pack INSTEAD of the single packages, not on top of them. Measured 2026-09-22
+# on a NUC15CRBC5: taking both fetched some 3.3 GB where the pack alone is 1.11 GB, and seven of
+# the eleven single packages were the very version the pack already carries. Neither side is a
+# superset of the other, which is why the ordinary run still exists: three singles are newer than
+# the pack - ASUS System Control Interface 3.1.43.0 against 3.1.36.0, and graphics 101.6452
+# against 101.5972 - while the Wi-Fi of the pack, 23.160.0.4G, is newer than the single 23.70.0.6G.
+# What the pack alone holds, and no single package does, is SST audio, the I226 adapter, RST and
+# CSME. So: infpack is the one-big-download form, the ordinary run is the up-to-date one.
+$packOnly = ($InfPack -and -not $NoInfPack)
+if ($InfPack -and $NoInfPack) {
+	Write-Warn "infpack and noinfpack were both asked for; the refusal wins and the single packages are taken"
+}
+
+$singles = @()
 $candidates = @()
 $familyPack = $null
 $skippedBySize = @()
@@ -326,8 +371,8 @@ foreach ($group in @($catalogue.Result.Obj)) {
 			Name   = [IO.Path]::GetFileName(($link -split '\?')[0])
 		}
 
-		# The family pack is kept aside whatever its group is: it is the fallback of step 5 and
-		# neither the group filter nor the size ceiling has anything to say about it there
+		# The family pack is kept aside whatever its group is: neither the group filter nor the
+		# size ceiling has anything to say about a package that is taken on purpose
 		if ($title -match '(?i)INF\s*(Driver\s*)?Pack') {
 			if ($null -eq $familyPack) { $familyPack = $entry }
 			continue
@@ -338,23 +383,51 @@ foreach ($group in @($catalogue.Result.Obj)) {
 			$skippedBySize += $entry
 			continue
 		}
-		$candidates += $entry
+		$singles += $entry
 	}
 }
 
-if ($skippedGroups -gt 0) { Write-Recipe "$skippedGroups catalogue group(s) left out as not relevant here" }
+if ($packOnly -and $null -eq $familyPack) {
+	Write-Warn "this catalogue has no family INF pack for $Model, so the single packages are taken instead"
+	$packOnly = $false
+}
 
-if ($null -ne $familyPack) {
-	if ($InfPack -and -not $NoInfPack) {
-		Write-Recipe "Taking the family INF pack as asked: $($familyPack.Title) ($($familyPack.Size))"
-		$candidates += $familyPack
-	} else {
+if ($packOnly) {
+	Write-Recipe "Taking the family INF pack and nothing else: $($familyPack.Title) ($($familyPack.Size))"
+	Write-Plain "$($singles.Count) single package(s) of this catalogue are left out: the pack carries the same families"
+	Write-Plain "cats prepare Drivers   without infpack takes the single packages, newer than the pack for some of them"
+	$candidates = @($familyPack)
+} else {
+	if ($skippedGroups -gt 0) { Write-Recipe "$skippedGroups catalogue group(s) left out as not relevant here" }
+	$candidates = @($singles)
+	if ($null -ne $familyPack) {
 		Write-Recipe "Leaving the family INF pack out for now: $($familyPack.Title) ($($familyPack.Size))"
 		Write-Plain "it is fetched by itself if a device turns out to have nothing else that claims it"
+		Write-Plain "cats prepare Drivers infpack   takes it instead of the single packages, one download and no more"
 	}
 }
 
-if ($skippedBySize.Count -gt 0) {
+# The published size is not the size of the file, so the ceiling is applied to what the server
+# says - and only for what is about to be fetched. The pack is not asked: it is taken on purpose
+# and the ceiling does not apply to it.
+if (-not $packOnly -and $candidates.Count -gt 0) {
+	$checked = @()
+	foreach ($entry in $candidates) {
+		$realMB = Get-RemoteSizeMB $entry.Url
+		if ($realMB -ge 0 -and [math]::Abs($realMB - $entry.SizeMB) -gt 1) {
+			$entry.Size = "{0:N2} MB, and not the {1} the catalogue publishes" -f $realMB, $entry.Size
+			$entry.SizeMB = $realMB
+		}
+		if ($realMB -gt $MaxSizeMB) {
+			$skippedBySize += $entry
+			continue
+		}
+		$checked += $entry
+	}
+	$candidates = @($checked)
+}
+
+if ($skippedBySize.Count -gt 0 -and -not $packOnly) {
 	Write-Warn "$($skippedBySize.Count) package(s) are larger than $MaxSizeMB MB and were left out; raise the ceiling, or fetch them by hand:"
 	foreach ($item in $skippedBySize) { Write-Plain "$($item.Title) ($($item.Size))"; Write-Plain "    $($item.Url)" }
 }
@@ -534,9 +607,14 @@ if ($needy.Count -gt 0) {
 	$library = Get-DriverMatches -Path $Path -Devices $needy -Architecture $architecture
 	$uncovered = @($library.Uncovered)
 
-	if ($uncovered.Count -gt 0 -and $null -ne $familyPack -and -not $NoInfPack -and -not (Test-AlreadyFetched $familyPack)) {
-		Write-Warn "$($uncovered.Count) device(s) have nothing in $Path that claims them:"
+	# Not when infpack was asked for: the pack is what this run took, so there is nothing left to
+	# fall back to and announcing it a second time would only read as a contradiction
+	if ($uncovered.Count -gt 0 -and $null -ne $familyPack -and -not $NoInfPack -and -not $packOnly -and -not (Test-AlreadyFetched $familyPack)) {
+		Write-Warn "$($uncovered.Count) device(s) have no driver package in $Path that can serve them:"
 		foreach ($device in $uncovered) { Write-Plain "$($device.Name) - $($device.InstanceId)" }
+		if ($library.ExtensionOnly.Count -gt 0) {
+			Write-Plain "$($library.ExtensionOnly.Count) device(s) among them are claimed by an extension package alone, which is not a driver"
+		}
 		Write-Recipe "The single packages of this catalogue do not hold their driver, so the family pack is taken:"
 		Write-Plain "$($familyPack.Title) ($($familyPack.Size)) - the size ceiling does not apply to it here"
 		Write-Plain "cats prepare Drivers noinfpack   refuses this, for a line that cannot afford it"
@@ -564,9 +642,13 @@ if ($needy.Count -gt 0) {
 		# catalogue: it is the library as it stands, without everything listed above
 		Write-Recipe "$($uncovered.Count) device(s) are claimed by nothing here yet, and nothing was fetched: run it without check to find out"
 	} else {
-		Write-Warn "$($uncovered.Count) device(s) are still claimed by nothing in ${Path}:"
+		Write-Warn "$($uncovered.Count) device(s) are still without a driver package in ${Path}:"
 		foreach ($device in $uncovered) { Write-Plain "$($device.Name) - $($device.InstanceId)" }
-		Write-Plain "the catalogue of $Model does not hold their driver: the vendor of the part does"
+		if ($packOnly) {
+			Write-Plain "only the family pack was taken: cats prepare Drivers, without infpack, adds the single packages"
+		} else {
+			Write-Plain "the catalogue of $Model does not hold their driver: the vendor of the part does"
+		}
 		if ($skippedBySize.Count -gt 0) {
 			Write-Plain "these were left out by the size ceiling and are the only candidates left here:"
 			foreach ($item in $skippedBySize) { Write-Plain "    $($item.Title) ($($item.Size))" }

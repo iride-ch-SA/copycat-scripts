@@ -8,13 +8,16 @@
 #  Get-DeviceIds        : the ids a device enumerates with, the
 #                         ones naming only a vendor or only a
 #                         device class left out
-#  Get-InfFacts         : the hardware ids an .inf claims and the
-#                         architectures it has sections for, read
-#                         in one pass over the file
+#  Get-InfFacts         : the hardware ids an .inf claims, the
+#                         architectures it has sections for and
+#                         whether it is an extension, read in one
+#                         pass over the file
 #  Test-IdMatch         : do two of those ids name the same part
 #  Get-DriverMatches    : the above over a whole library - which
-#                         package fits which device, and which
-#                         device nothing fits
+#                         package fits which device, which device
+#                         nothing fits, and which is claimed by an
+#                         extension alone, which is the same as
+#                         nothing
 #
 #  driver-scan.ps1 installs what fits; asus-driver-fetch.ps1 asks
 #  whether the vendor catalogue still owes this machine
@@ -120,6 +123,21 @@ function Get-InfDecorations([string]$text) {
 	return @($decorations | Select-Object -Unique)
 }
 
+# An extension .inf does not install a device, it adds settings on top of the package that does:
+# Class=Extension, its own ClassGuid, and an ExtensionId. Windows stages it and even reports it as
+# updated on the device - and the device stays without a driver, because an extension has none to
+# give. Measured 2026-09-22 on a NUC15CRBC5: HdBusExt.inf of the Intel graphics package claims
+# PCI\VEN_8086&DEV_51CA, which is that board's multimedia audio controller, so it was the only
+# thing in the library claiming that device; pnputil answered "driver package updated on device,
+# 0 added" and the device stayed at problem 28. The base driver of that part, IntcAudioBus.inf,
+# was in the family INF pack that nobody had fetched - because the device counted as claimed.
+function Test-InfIsExtension([string]$text) {
+    if ($text -match '(?im)^\s*ExtensionId\s*=') { return $true }
+    if ($text -match '(?im)^\s*Class\s*=\s*Extension\b') { return $true }
+    if ($text -match '(?i)\{e2f84ce7-8efa-411c-aa69-97454ca4cb57\}') { return $true }
+    return $false
+}
+
 function Get-HostArchitecture {
 	# ARCHITEW6432 first: inside a 32 bit PowerShell on a 64 bit Windows, PROCESSOR_ARCHITECTURE
 	# says x86 and would have this machine install x86 packages on itself
@@ -135,7 +153,7 @@ function Get-HostArchitecture {
 }
 
 function Get-InfFacts([string]$file) {
-	$facts = [pscustomobject]@{ File = $file; Ids = @(); Decorations = @(); Read = $false }
+	$facts = [pscustomobject]@{ File = $file; Ids = @(); Decorations = @(); IsExtension = $false; Read = $false }
 	$text = ''
 	try {
 		$text = Get-Content -LiteralPath $file -Raw -ErrorAction Stop
@@ -150,6 +168,7 @@ function Get-InfFacts([string]$file) {
 	}
 	$facts.Ids = @($found | Select-Object -Unique)
 	$facts.Decorations = Get-InfDecorations $text
+	$facts.IsExtension = Test-InfIsExtension $text
 	return $facts
 }
 
@@ -181,6 +200,7 @@ function Get-DriverMatches {
 		OtherArchitecture = 0
 		Unreadable        = 0
 		Uncovered         = @()
+		ExtensionOnly     = @()
 	}
 
 	if (-not (Test-Path -LiteralPath $Path)) {
@@ -192,6 +212,7 @@ function Get-DriverMatches {
 	$result.InfCount = $infFiles.Count
 
 	$covered = @{}
+	$byExtension = @{}
 	$relevant = @()
 	foreach ($inf in $infFiles) {
 		$facts = Get-InfFacts $inf.FullName
@@ -211,13 +232,16 @@ function Get-DriverMatches {
 				}
 				if ($hit) {
 					$matched += $device.Name
-					$covered[[string]$device.InstanceId] = $true
+					# An extension claims the device without being able to serve it, so it does not
+					# cover it: counted apart, and the device stays in the list of what is missing
+					if ($facts.IsExtension) { $byExtension[[string]$device.InstanceId] = $true }
+					else { $covered[[string]$device.InstanceId] = $true }
 					break
 				}
 			}
 		}
 		if ($matched.Count -gt 0) {
-			$relevant += [pscustomobject]@{ File = $inf.FullName; Devices = @($matched | Select-Object -Unique) }
+			$relevant += [pscustomobject]@{ File = $inf.FullName; Devices = @($matched | Select-Object -Unique); IsExtension = $facts.IsExtension }
 		}
 	}
 
@@ -225,5 +249,8 @@ function Get-DriverMatches {
 	# Keyed by instance id and not by name: a machine with three unknown devices calls all three
 	# of them "Dispositivo PCI", and two of them would be reported as covered by the first
 	$result.Uncovered = @($Devices | Where-Object { -not $covered.ContainsKey([string]$_.InstanceId) })
+	# The ones an operator would otherwise be told nothing about: something does claim them, and it
+	# is a package that cannot serve them
+	$result.ExtensionOnly = @($result.Uncovered | Where-Object { $byExtension.ContainsKey([string]$_.InstanceId) })
 	return $result
 }

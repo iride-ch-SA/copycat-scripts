@@ -44,7 +44,7 @@ rem    cats prepare Drivers force           fetch again what is already there
 rem    cats prepare Drivers noinstall       fetch only, do not offer to install
 rem    cats prepare Drivers model <sku>     ask the catalogue for another model name
 rem    cats prepare Drivers max <mb>        raise the size ceiling, 1024 MB by default
-rem    cats prepare Drivers infpack         take the family INF pack straight away
+rem    cats prepare Drivers infpack         the family pack INSTEAD of the single packages
 rem    cats prepare Drivers noinfpack       never take it, whatever is missing
 rem
 rem  The family INF pack is the archive of over a gigabyte that
@@ -52,13 +52,21 @@ rem  holds the drivers of a whole NUC family. It is not fetched
 rem  with the rest, because a posa does not wait for it by
 rem  accident - but once the single packages are unpacked the
 rem  library is read back with the same matcher cats install
-rem  Drivers uses, and a device that nothing claims sends the
+rem  Drivers uses, and a device that nothing can serve sends the
 rem  fetch after the pack, size ceiling or not. That is not a
 rem  nicety: measured 2026-09-21, the catalogue of a NUC15CRBC5
 rem  has no Audio group at all and the driver of its multimedia
 rem  audio controller exists there only inside the pack, so
 rem  without this the machine ends a posa without audio and with
 rem  a console saying every package was installed.
+rem
+rem  infpack takes the pack INSTEAD of the single packages, not
+rem  on top of them: on that same catalogue it is 1.11 GB against
+rem  some 3.3 GB, and seven of the eleven single packages are the
+rem  very version the pack already carries. It is the form for
+rem  one download and no more - not the form for the most recent
+rem  driver of every part, because three singles are newer than
+rem  what the pack holds. The plain run is the up to date one.
 rem
 rem  A driver that asks for a restart before it is fully in
 rem  charge does not restart the machine here: cats-resume.bat is

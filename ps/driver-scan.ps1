@@ -21,6 +21,16 @@
 #  scan will consider unclaimed, or it stops with the catalogue
 #  still holding the one package the machine needed.
 #
+#  An EXTENSION .inf claims a device without being able to serve
+#  it - it adds settings on top of the package that installs the
+#  driver - so it is installed when it matches but never counted
+#  as covering anything. Measured 2026-09-22: HdBusExt.inf of the
+#  Intel graphics package claims PCI\VEN_8086&DEV_51CA, the
+#  multimedia audio controller of a NUC15CRBC5, and was the only
+#  thing in the library claiming it. pnputil staged it, said
+#  "driver package updated on device, 0 added", and the device
+#  stayed at problem 28 while the fetch went home satisfied.
+#
 #  Parameters:
 #    -Path <folder>  the driver library, C:\Admin\Drivers by
 #                    default. The same folder the HPSA9 and
@@ -180,8 +190,14 @@ $packages = @(Get-ChildItem -LiteralPath $Path -Recurse -File -ErrorAction Silen
 # whether there is still something to fetch, and an operator reading the console has to see it
 # whether or not the other devices were served
 if ($library.Uncovered.Count -gt 0) {
-	Write-Warn "$($library.Uncovered.Count) device(s) have nothing in $Path that claims them:"
+	Write-Warn "$($library.Uncovered.Count) device(s) have no driver package in $Path that can serve them:"
 	foreach ($device in $library.Uncovered) { Write-Plain "$($device.Name) - $($device.InstanceId)" }
+	if ($library.ExtensionOnly.Count -gt 0) {
+		# The trap this line exists for: something DOES claim the device, and it is a package that
+		# cannot give it a driver. Said plainly, or the console reads as a contradiction
+		Write-Warn "$($library.ExtensionOnly.Count) device(s) among them are claimed by an extension package alone, which adds settings to a driver and is not one:"
+		foreach ($device in $library.ExtensionOnly) { Write-Plain "$($device.Name)" }
+	}
 	Write-Plain "cats prepare Drivers   asks the vendor catalogue for what is missing"
 }
 
@@ -197,7 +213,8 @@ if ($library.Relevant.Count -eq 0) {
 Write-Recipe "$($library.Relevant.Count) driver package(s) fit this machine:"
 foreach ($item in $library.Relevant) {
 	Write-Plain "$($item.File)"
-	Write-Plain "    for: $($item.Devices -join ', ')"
+	$kind = if ($item.IsExtension) { ' (extension: settings on top of a driver, not a driver)' } else { '' }
+	Write-Plain "    for: $($item.Devices -join ', ')$kind"
 }
 
 if ($Check) {
