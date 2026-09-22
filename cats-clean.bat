@@ -17,9 +17,27 @@ for %%a in (%*) do (
 		)
 	)
 	
+	rem  Two steps, in this order: cleanmgr takes the files off the
+	rem  volume, the retrim tells the layer underneath that the blocks
+	rem  they used are free again. Without the second one a virtual
+	rem  machine frees space inside the guest and none at all in the
+	rem  vmdk or the vhdx, which is the space someone is paying for.
+	rem  The retrim is done on every volume that can take it, not on
+	rem  C: alone. cats clean disks list removes nothing: it says
+	rem  which volumes the retrim would take.
 	if /I "%%a"=="disks" (
-		echo [36mSHORTCUT  : Do a Cleanmgr with sagerun:1 [0m
-		cmd /c cleanmgr /sagerun:1
+		if /I "%~2"=="list" (
+			echo [36mSHORTCUT  : Which volumes a retrim would take [0m
+			powershell -noprofile -executionpolicy bypass -command "& %CATS_ROOT%\ps\retrim-volumes.ps1 -List; exit $LASTEXITCODE"
+		) else (
+			echo [36mSHORTCUT  : Do a Cleanmgr with sagerun:1 [0m
+			cmd /c cleanmgr /sagerun:1
+			echo [36mSHORTCUT  : Give the freed space back, on every volume that takes a retrim [0m
+			powershell -noprofile -executionpolicy bypass -command "& %CATS_ROOT%\ps\retrim-volumes.ps1; exit $LASTEXITCODE"
+			if errorlevel 1 (
+				echo [33mWARNING   : no volume was retrimmed, the lines above say why [0m
+			)
+		)
 	)
 	
 	rem  CATS_HOME is the copy under the temporary folder this very
