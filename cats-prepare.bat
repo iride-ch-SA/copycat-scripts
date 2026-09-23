@@ -15,11 +15,16 @@ for %%a in (%*) do (
 		)
 	)
 
-	if /I "%%a"=="win-updates" (
-		echo [36mInstall Power Shell Windows Updates Tools[0m 
-		powershell -command "Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force"
-		powershell -command "Install-Module PSWindowsUpdate -Force"
-		powershell -command "Set-PSRepository -Name 'PSGallery' -InstallationPolicy Trusted"
+	rem  The shortcuts of cats prepare Microsoft.Windows, which installs
+	rem  what cats update Windows needs. win-updates is the old name
+	set "PR_WINDOWS="
+	if /I "%%a"=="Windows" set "PR_WINDOWS=1"
+	if /I "%%a"=="win-updates" set "PR_WINDOWS=1"
+	if defined PR_WINDOWS (
+		echo [36mSHORTCUT  : Windows Update tools, see cats-recipes\Microsoft.Windows.bat [0m
+		if exist "%CATS_HOME%\cats-recipes\Microsoft.Windows.bat" (
+			call "%CATS_HOME%\cats-recipes\Microsoft.Windows.bat" prepare %2 %3 %4 %5 %6 %7 %8 %9
+		)
 	)
 )
 

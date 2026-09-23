@@ -9,6 +9,12 @@ if not defined CATS_HOME set "CATS_HOME=%CATS_ROOT%"
 rem ============================================================
 rem  Microsoft.Windows
 rem
+rem  cats prepare Microsoft.Windows - cats prepare Windows and
+rem  cats prepare win-updates are the shortcuts - installs what
+rem  update needs, once per machine: the NuGet package provider
+rem  and the PSWindowsUpdate module, with PSGallery trusted.
+rem  Exit codes: 0 PSWindowsUpdate is available, 2 it is not.
+rem
 rem  cats update Microsoft.Windows - cats update Windows is the
 rem  shortcut - upgrades every winget package and runs one pass
 rem  of Windows Update through ps\windows-update.ps1. It runs on
@@ -38,6 +44,23 @@ rem  Exit codes: 0 something was changed, 1 there was nothing to
 rem  change, 2 the machine is not a Windows 11 workstation or a
 rem  change failed.
 rem ============================================================
+
+if /I "%~1"=="prepare" (
+
+	echo [36mRECIPE    : Installing the PowerShell tools of Windows Update [0m
+	powershell -command "Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force"
+	powershell -command "Install-Module PSWindowsUpdate -Force"
+	powershell -command "Set-PSRepository -Name 'PSGallery' -InstallationPolicy Trusted"
+
+	rem  Check, do not assume: Install-Module can fail and say little
+	powershell -noprofile -command "if (Get-Module -ListAvailable -Name PSWindowsUpdate) { exit 0 } else { exit 1 }"
+	if errorlevel 1 (
+		echo [31mERROR     : PSWindowsUpdate is not available after the install, the reason is in the lines above [0m
+		exit /b 2
+	)
+	echo [36mRECIPE    : PSWindowsUpdate is available, cats update Windows can run [0m
+	exit /b 0
+)
 
 if /I "%~1"=="update" (
 
