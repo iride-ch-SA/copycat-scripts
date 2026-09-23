@@ -96,6 +96,14 @@ for %%a in (%*) do (
 		call "%CATS_HOME%\cats-resume.bat" request
 	)
 	
+	rem  The shortcut of cats clean Microsoft.Windows
+	if /I "%%a"=="Windows" (
+		echo [36mSHORTCUT  : Windows apps and settings, see cats-recipes\Microsoft.Windows.bat [0m
+		if exist "%CATS_HOME%\cats-recipes\Microsoft.Windows.bat" (
+			call "%CATS_HOME%\cats-recipes\Microsoft.Windows.bat" clean %2 %3 %4 %5 %6 %7 %8 %9
+		)
+	)
+	
 	if /I "%%a"=="itadmin" (
 		if /I not "%~1"=="User" (
 			echo [36mSHORTCUT  : New random password for the itadmin account [0m
