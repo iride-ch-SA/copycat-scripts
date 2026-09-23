@@ -53,14 +53,21 @@ rem   12. cats install Drivers          - once more: Windows
 rem       Update installs drivers of its own and brings devices
 rem       up with them, and a pass that finds nothing to do says
 rem       so and costs one enumeration
-rem   13. cats prepare Machine          - the random name, which
+rem   13. cats clean Microsoft.Windows  - the consumer apps off
+rem       and the workplace settings on. After Windows Update, so
+rem       nothing an update brings back is left behind, and before
+rem       the restart of the rename, at which the settings of the
+rem       signed-in user and fast startup take effect. On anything
+rem       but Windows 11 it refuses with an error and the chain
+rem       carries on
+rem   14. cats prepare Machine          - the random name, which
 rem       takes effect at the restart it asks for
-rem   14. cats create Machine           - the hardware identifier,
+rem   15. cats create Machine           - the hardware identifier,
 rem       taken after that last restart, on the machine as it
 rem       will be delivered
-rem   15. cats clean Wildcat background - the wallpaper, drawn on
+rem   16. cats clean Wildcat background - the wallpaper, drawn on
 rem       a machine that by now has its final name
-rem   16. cats clean Wildcat autologon off - the last act, always
+rem   17. cats clean Wildcat autologon off - the last act, always
 rem
 rem  THIS CHAIN ENDS ON ITS OWN. No step of it waits for anybody,
 rem  and nothing in it is a half of something an operator finishes
@@ -144,7 +151,7 @@ rem    cats clean Wildcat autologon on|off   the automatic logon
 rem ============================================================
 
 set WC_HEAD=clean Wildcat autologon on+install Drivers+update Scripts+clean Wildcat restart+clean Wildcat rechain
-set WC_TAIL=clean Wildcat virtio+prepare Drivers infpack yes+clean Wildcat gpu+clean Wildcat restart+install Drivers+update Windows+install Drivers+prepare Machine+create Machine+clean Wildcat background+clean Wildcat autologon off
+set WC_TAIL=clean Wildcat virtio+prepare Drivers infpack yes+clean Wildcat gpu+clean Wildcat restart+install Drivers+update Windows+install Drivers+clean Microsoft.Windows+prepare Machine+create Machine+clean Wildcat background+clean Wildcat autologon off
 set WC_CHAIN=%WC_HEAD%+%WC_TAIL%
 
 if /I "%~1"=="clean" (
