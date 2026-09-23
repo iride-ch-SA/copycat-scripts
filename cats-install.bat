@@ -32,7 +32,7 @@ for %%a in (%*) do (
 			if /I "%%a"=="intelDASA" ( call "%CATS_HOME%\cats-install-winget.bat" Intel.IntelDriverAndSupportAssistant & set isShortCut=1 )
 			if /I "%%a"=="gDrive" ( call "%CATS_HOME%\cats-install-winget.bat" Google.GoogleDrive & set isShortCut=1 )
 			if /I "%%a"=="qGIS" ( call "%CATS_HOME%\cats-install-winget.bat" OSGeo.QGIS_LTR & set isShortCut=1 )
-			if /I "%%a"=="WindowsApp" ( call "%CATS_HOME%\cats-install-winget.bat" Microsoft.WindowsApp & set isShortCut=1 )
+			if /I "%%a"=="WindowsApp" ( call "%CATS_HOME%\cats-install-winget.bat" Microsoft.WindowsApp --scope machine & set isShortCut=1 )
 			if /I "%%a"=="GWSMO" ( 
 				if exist "%CATS_HOME%\cats-recipes\Google.GWSMO.bat" ( 
 					call "%CATS_HOME%\cats-recipes\Google.GWSMO.bat" install
