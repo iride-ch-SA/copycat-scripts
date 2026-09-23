@@ -4,13 +4,24 @@
 #  sets the Start menu the way a workplace wants it.
 #
 #  What it does
-#    apps    removes every package of the list below for all
-#            users, and the provisioned copy that would hand it
-#            to the next user who signs in for the first time
-#    start   sets the All section of the Start menu to List view
-#            (AllAppsViewMode = 2) in the default profile, so
-#            every new user gets it, and in every profile
-#            already on the machine
+#    apps     removes every package of the list below for all
+#             users, and the provisioned copy that would hand it
+#             to the next user who signs in for the first time
+#    user     writes the per-user settings of the list below in
+#             the default profile, so every new user gets them,
+#             and in every profile already on the machine:
+#               - the All section of the Start menu in List view
+#               - no promoted app installed behind the user's back
+#               - no Bing web results in the Start menu search
+#               - no recommendations, tips or setup nags in Start,
+#                 Settings and on the lock screen
+#               - no advertising ID, no tailored experiences
+#               - no game recording
+#    machine  writes the machine settings of the list below:
+#               - fast startup off, so a shutdown is a real one
+#               - diagnostic data at Required, advertising ID
+#                 off by policy
+#               - game recording off by policy
 #
 #  It runs on Windows 11 only, and never on a server: the check
 #  reads InstallationType and CurrentBuildNumber from the
@@ -24,15 +35,17 @@
 #  Xbox Speech To Text, and Get Help, which the troubleshooters
 #  open) and anything a user may reasonably work with (Photos,
 #  Snipping Tool, Calculator, Notepad, Paint, Sticky Notes).
-#  A package
-#  Windows marks NonRemovable is reported and left alone.
+#  A package Windows marks NonRemovable is reported and left
+#  alone. No setting is written under Software\Policies of the
+#  user hives: a policy there is what sends the Start menu back
+#  to Category view at a Group Policy refresh.
 #
 #  -List says what would be removed and changed, and changes
 #  nothing.
 #
 #  Exit codes: 0 something was removed or set (or, with -List,
 #  found), 1 there was nothing to do, 2 the run cannot do its
-#  work - not Windows 11, a server, no elevation, or a removal
+#  work - not Windows 11, a server, no elevation, or a change
 #  that failed.
 # ============================================================
 
@@ -163,37 +176,95 @@ foreach ($package in $provisioned) {
 	}
 }
 
-# ---- 3. The Start menu, All section in List view, in every profile ----
+# ---- 3. The per-user settings, in every profile ----
 
-# The value lives in each user's own hive. A signed-in user's hive is
-# already under HKEY_USERS and is written there; any other profile,
-# and the default one new users are copied from, is loaded from its
-# NTUSER.DAT, written and unloaded. reg.exe does the reading and the
-# writing as well as the loading: a key opened through the registry
-# provider keeps a handle that makes reg unload fail
-$startKey  = 'Software\Microsoft\Windows\CurrentVersion\Start'
-$startName = 'AllAppsViewMode'
-$startList = 2
+# Every value lives in each user's own hive, under the path given here
+# relative to it. Only REG_DWORD values
+$userValues = @(
+	# The All section of the Start menu in List view: 0 Category, 1 Grid, 2 List
+	@('Software\Microsoft\Windows\CurrentVersion\Start', 'AllAppsViewMode', 2),
+	# No promoted app installed behind the user's back: these are the switches
+	# that bring the consumer apps removed above back in through the Start menu
+	@('Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', 'SilentInstalledAppsEnabled', 0),
+	@('Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', 'PreInstalledAppsEnabled', 0),
+	@('Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', 'PreInstalledAppsEverEnabled', 0),
+	@('Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', 'OemPreInstalledAppsEnabled', 0),
+	@('Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', 'SystemPaneSuggestionsEnabled', 0),
+	@('Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', 'SubscribedContent-338388Enabled', 0),
+	# No Bing web results in the Start menu search. The policy that does the same,
+	# DisableSearchBoxSuggestions, lives under Software\Policies and is left alone
+	@('Software\Microsoft\Windows\CurrentVersion\Search', 'BingSearchEnabled', 0),
+	# Start: no recommendations of tips, shortcuts and new apps, no account notifications
+	@('Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', 'Start_IrisRecommendations', 0),
+	@('Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced', 'Start_AccountNotifications', 0),
+	# No "get even more out of Windows" after an update, no welcome experience, no tips as you use Windows
+	@('Software\Microsoft\Windows\CurrentVersion\UserProfileEngagement', 'ScoobeSystemSettingEnabled', 0),
+	@('Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', 'SubscribedContent-310093Enabled', 0),
+	@('Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', 'SubscribedContent-338389Enabled', 0),
+	@('Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', 'SoftLandingEnabled', 0),
+	# No suggested content in Settings
+	@('Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', 'SubscribedContent-338393Enabled', 0),
+	@('Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', 'SubscribedContent-353694Enabled', 0),
+	@('Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', 'SubscribedContent-353696Enabled', 0),
+	# Lock screen: the picture stays, the fun facts and tips over it go
+	@('Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', 'SubscribedContent-338387Enabled', 0),
+	@('Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager', 'RotatingLockScreenOverlayEnabled', 0),
+	# Privacy: no advertising ID for apps, no tailored experiences from diagnostic data
+	@('Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo', 'Enabled', 0),
+	@('Software\Microsoft\Windows\CurrentVersion\Privacy', 'TailoredExperiencesWithDiagnosticDataEnabled', 0),
+	# No game recording
+	@('System\GameConfigStore', 'GameDVR_Enabled', 0),
+	@('Software\Microsoft\Windows\CurrentVersion\GameDVR', 'AppCaptureEnabled', 0)
+)
 
-function Set-StartView([string]$hiveRoot, [string]$label) {
-	$query = & reg.exe query "$hiveRoot\$startKey" /v $startName 2>$null
-	if ($LASTEXITCODE -eq 0 -and ($query -match "$startName\s+REG_DWORD\s+0x0*$startList\b")) { return }
-	if ($script:List) {
-		Write-Recipe "Would set the Start menu to List view for $label"
-		$script:changed++
-		return
+# The machine settings, under HKLM
+$machineValues = @(
+	# Fast startup off: a shutdown is a real one, and a driver or an update
+	# that waits for a restart does not wait for a restart that never comes
+	@('SYSTEM\CurrentControlSet\Control\Session Manager\Power', 'HiberbootEnabled', 0),
+	# Diagnostic data at Required, the lowest level Pro honours; 0 means
+	# Security only and is taken as Required on anything but Enterprise and Education
+	@('SOFTWARE\Policies\Microsoft\Windows\DataCollection', 'AllowTelemetry', 1),
+	@('SOFTWARE\Policies\Microsoft\Windows\AdvertisingInfo', 'DisabledByGroupPolicy', 1),
+	@('SOFTWARE\Policies\Microsoft\Windows\GameDVR', 'AllowGameDVR', 0)
+)
+
+# reg.exe does the reading and the writing as well as the loading of the
+# hives: a key opened through the registry provider keeps a handle that
+# makes reg unload fail. Answers how many values were written - with
+# -List, how many would be - and counts the failures itself
+function Set-Values([string]$root, [object[]]$values) {
+	$count = 0
+	foreach ($entry in $values) {
+		$key = "$root\$($entry[0])"
+		$name = $entry[1]
+		$value = $entry[2]
+		$query = & reg.exe query $key /v $name 2>$null
+		$hex = '{0:x}' -f $value
+		if ($LASTEXITCODE -eq 0 -and ($query -match ('\s' + [regex]::Escape($name) + '\s+REG_DWORD\s+0x0*' + $hex + '\s*$'))) { continue }
+		if ($script:List) { $count++; continue }
+		& reg.exe add $key /v $name /t REG_DWORD /d $value /f 2>&1 | Out-Null
+		if ($LASTEXITCODE -eq 0) {
+			$count++
+		} else {
+			Write-Fail "$key\$name was not written, reg add returned $LASTEXITCODE"
+			$script:failed++
+		}
 	}
-	& reg.exe add "$hiveRoot\$startKey" /v $startName /t REG_DWORD /d $startList /f | Out-Null
-	if ($LASTEXITCODE -eq 0) {
-		Write-Recipe "Start menu set to List view for $label"
-		$script:changed++
-	} else {
-		Write-Fail "the Start menu view was not written for $label, reg add returned $LASTEXITCODE"
-		$script:failed++
-	}
+	return $count
 }
 
-function Set-StartViewInFile([string]$hiveFile, [string]$label) {
+function Set-UserValues([string]$hiveRoot, [string]$label) {
+	$count = Set-Values $hiveRoot $script:userValues
+	if ($count -eq 0) { return }
+	$script:changed += $count
+	if ($script:List) { Write-Recipe "Would write $count setting(s) for $label" } else { Write-Recipe "$count setting(s) written for $label" }
+}
+
+# A signed-in user's hive is already under HKEY_USERS and is written
+# there; any other profile, and the default one new users are copied
+# from, is loaded from its NTUSER.DAT, written and unloaded
+function Set-UserValuesInFile([string]$hiveFile, [string]$label) {
 	if (-not (Test-Path $hiveFile)) { return }
 	$mount = 'HKU\CatsCleanWindows'
 	& reg.exe load $mount $hiveFile 2>&1 | Out-Null
@@ -202,7 +273,7 @@ function Set-StartViewInFile([string]$hiveFile, [string]$label) {
 		return
 	}
 	try {
-		Set-StartView $mount $label
+		Set-UserValues $mount $label
 	} finally {
 		& reg.exe unload $mount 2>&1 | Out-Null
 		if ($LASTEXITCODE -ne 0) { Write-Warn "the hive of $label is still mounted as $mount, it goes at the next restart" }
@@ -211,7 +282,7 @@ function Set-StartViewInFile([string]$hiveFile, [string]$label) {
 
 # The folder that holds the profiles, C:\Users on a default installation
 $usersDir = Split-Path $env:PUBLIC -Parent
-Set-StartViewInFile "$usersDir\Default\NTUSER.DAT" 'the default profile, that is every new user'
+Set-UserValuesInFile "$usersDir\Default\NTUSER.DAT" 'the default profile, that is every new user'
 
 $loaded = @(Get-ChildItem 'Registry::HKEY_USERS' -ErrorAction SilentlyContinue | ForEach-Object { $_.PSChildName })
 $profileList = 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList'
@@ -223,21 +294,31 @@ foreach ($key in @(Get-ChildItem $profileList -ErrorAction SilentlyContinue)) {
 	$profilePath = (Get-ItemProperty $key.PSPath -ErrorAction SilentlyContinue).ProfileImagePath
 	if (-not $profilePath) { continue }
 	if ($loaded -contains $sid) {
-		Set-StartView "HKU\$sid" $profilePath
+		Set-UserValues "HKU\$sid" $profilePath
 	} else {
-		Set-StartViewInFile "$profilePath\NTUSER.DAT" $profilePath
+		Set-UserValuesInFile "$profilePath\NTUSER.DAT" $profilePath
 	}
 }
 
-# The Start menu reads the value when it starts: it is restarted so the
-# signed-in users see the change, and Windows starts it again on its own
+# ---- 4. The machine settings ----
+
+$machineCount = Set-Values 'HKLM' $machineValues
+if ($machineCount -gt 0) {
+	$changed += $machineCount
+	if ($List) { Write-Recipe "Would write $machineCount machine setting(s)" } else { Write-Recipe "$machineCount machine setting(s) written" }
+}
+
+# The Start menu reads its view when it starts: it is restarted so the
+# signed-in users see the change, and Windows starts it again on its own.
+# The other settings take effect at the next sign-in, fast startup at the
+# next shutdown
 if (-not $List -and $changed -gt 0) {
 	Get-Process -Name 'StartMenuExperienceHost' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 }
 
 if ($failed -gt 0) { exit 2 }
 if ($changed -eq 0) {
-	Write-Recipe "Nothing to change: no app of the list is here and the Start menu is already in List view"
+	Write-Recipe "Nothing to change: no app of the list is here and every setting is already in place"
 	exit 1
 }
 
