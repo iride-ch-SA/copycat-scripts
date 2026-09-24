@@ -13,7 +13,11 @@
 #  whoami /upn has no answer, and it refuses to start.
 #  The edge node is the per machine half, installed elevated
 #  with /systemkey. It is a prerequisite and it is not installed
-#  here: without it the script stops.
+#  here: without it the script stops. A user may be refused a
+#  look at the service - Get-Service answers access denied, and
+#  as a terminating error - so it is looked for three ways, none
+#  of which can stop the script: the executable, the service key
+#  in the registry, the running process.
 #
 #  WHERE THE KEYS ARE. Region, organisation id, user key and
 #  system key belong to the customer, so they are never in this
@@ -41,6 +45,10 @@
 #  user of the machine finds it. It is downloaded under another
 #  name and renamed once complete: a download cut short leaves
 #  no truncated installer for the next user to run.
+#  -Fetch does that and nothing else, in any context and without
+#  the JSON: cats prepare PaperCut.Hive calls it, so the first
+#  sign in does not wait for the download. The download stays
+#  here as well, for a machine whose installer went missing.
 #
 #  THE LINK. pc-print-client-service.exe command link-with-email
 #  writes data\config\userclient.ident; that file is how this
@@ -61,6 +69,8 @@
 #    -Timeout <seconds>  how long to wait for the client to
 #                        appear after the installer, 120
 #    -Restart            restart the print client after linking
+#    -Fetch              only make sure the installer is there,
+#                        downloading it if it is not
 #
 #  Exit codes: 0 installed and linked, whether or not anything
 #  had to be done; 1 the edge node is not on this machine; 2 the
@@ -68,6 +78,7 @@
 #  4 the link failed; 5 the JSON is missing or incomplete; 6 the
 #  installer is missing and the download failed; 7 the script
 #  runs as SYSTEM; 8 an unexpected error, named on the console.
+#  With -Fetch: 0 the installer is there, 6 the download failed.
 # ============================================================
 
 [CmdletBinding()]
@@ -76,7 +87,8 @@ param(
 	[string]$Installer = 'C:\Admin\Installers\papercut-hive.exe',
 	[string]$InstallerUrl = 'https://storage.googleapis.com/01931185-232c-77a5-8e67-8751490ebf3e/CopyCats/Admin/Installers/papercut-hive.exe',
 	[int]$Timeout = 120,
-	[switch]$Restart
+	[switch]$Restart,
+	[switch]$Fetch
 )
 
 $ErrorActionPreference = 'Stop'
@@ -104,6 +116,44 @@ function Wait-File([string]$path, [int]$seconds) {
 	return $true
 }
 
+# The installer in its folder, downloaded when it is missing. True when it is there
+function Get-Installer {
+	if (Test-Path -LiteralPath $Installer) { return $true }
+	Write-Recipe "$Installer is missing: downloading it from the CopyCats bucket"
+	$partial = $Installer + '.download'
+	try {
+		$folder = Split-Path -Parent $Installer
+		if (-not (Test-Path -LiteralPath $folder)) { New-Item -ItemType Directory -Path $folder | Out-Null }
+		[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+		(New-Object System.Net.WebClient).DownloadFile($InstallerUrl, $partial)
+		Move-Item -LiteralPath $partial -Destination $Installer -Force
+	} catch {
+		Remove-Item -LiteralPath $partial -Force -ErrorAction SilentlyContinue
+		Write-Fail "download failed: $($_.Exception.Message)"
+		return $false
+	}
+	Write-Done "$Installer downloaded"
+	return $true
+}
+
+# The edge node, looked for in three ways, each of which may be refused to a user
+function Test-EdgeNode {
+	$probes = @(
+		{ Test-Path -LiteralPath (Join-Path $env:ProgramFiles 'PaperCut Hive\pc-edgenode-service.exe') },
+		{ Test-Path -LiteralPath 'HKLM:\SYSTEM\CurrentControlSet\Services\pc-edgenode-service' },
+		{ [bool](Get-Process -Name 'pc-edgenode-service' -ErrorAction SilentlyContinue) }
+	)
+	foreach ($probe in $probes) {
+		try { if (& $probe) { return $true } } catch { }
+	}
+	return $false
+}
+
+if ($Fetch) {
+	if (Get-Installer) { exit 0 }
+	exit 6
+}
+
 # 0. Context: the user signing in, never SYSTEM
 if ([Security.Principal.WindowsIdentity]::GetCurrent().User.Value -eq 'S-1-5-18') {
 	Write-Fail 'this runs as SYSTEM, and the print client is installed and linked per user'
@@ -127,30 +177,15 @@ $userKey   = ([string]$cfg.UserKey).Trim()
 $systemKey = ([string]$cfg.SystemKey).Trim()
 
 # 0. The edge node, per machine, installed elevated elsewhere. The file is the
-# detection rule PaperCut gives for Intune; the service name is checked as well
-$edge = Join-Path $env:ProgramFiles 'PaperCut Hive\pc-edgenode-service.exe'
-if (-not (Test-Path -LiteralPath $edge) -and -not (Get-Service -Name 'pc-edgenode-service' -ErrorAction SilentlyContinue)) {
+# detection rule PaperCut gives for Intune
+if (-not (Test-EdgeNode)) {
 	Write-Fail 'the PaperCut Hive edge node is not on this machine: it is installed elevated, with /systemkey'
 	exit 1
 }
 
 # 1. The client, when it is missing
 if (-not (Test-Path -LiteralPath $svc)) {
-	if (-not (Test-Path -LiteralPath $Installer)) {
-		Write-Recipe "$Installer is missing: downloading it from the CopyCats bucket"
-		$partial = $Installer + '.download'
-		try {
-			$folder = Split-Path -Parent $Installer
-			if (-not (Test-Path -LiteralPath $folder)) { New-Item -ItemType Directory -Path $folder | Out-Null }
-			[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
-			(New-Object System.Net.WebClient).DownloadFile($InstallerUrl, $partial)
-			Move-Item -LiteralPath $partial -Destination $Installer -Force
-		} catch {
-			Remove-Item -LiteralPath $partial -Force -ErrorAction SilentlyContinue
-			Write-Fail "download failed: $($_.Exception.Message)"
-			exit 6
-		}
-	}
+	if (-not (Get-Installer)) { exit 6 }
 
 	Write-Recipe 'Installing the PaperCut Hive print client for this user'
 	# WaitForExit and not Start-Process -Wait: -Wait waits for every process the

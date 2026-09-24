@@ -22,7 +22,8 @@ exit /b 2
 rem ============================================================
 rem  prepare readies a machine for the PaperCut Hive print client,
 rem  which is installed and linked per user, at sign in, by
-rem  ps\papercut-hive.ps1. It writes two things and runs nothing:
+rem  ps\papercut-hive.ps1. It installs nothing, and does three
+rem  things:
 rem    1. C:\Admin\Others\papercut-hive.json, with the four keys
 rem       of the customer left empty, to be filled in by hand.
 rem       They are never in this repository, which is public.
@@ -34,6 +35,13 @@ rem       userlogin.bat. If that file is missing it is written
 rem       first by cats prepare Userlogin, the recipe it belongs
 rem       to. The line is added once: a file that already names
 rem       papercut-hive.ps1 is left alone.
+rem    3. the installer, C:\Admin\Installers\papercut-hive.exe,
+rem       downloaded from the CopyCats bucket if it is missing, so
+rem       that the first sign in does not wait for it. The download
+rem       is done by the script itself, papercut-hive.ps1 -Fetch:
+rem       the address and the way it is fetched live in one place,
+rem       and the script still fetches it at sign in if it went
+rem       missing afterwards.
 rem  An existing JSON is never overwritten: it holds the keys.
 rem  The sign in script runs only if the task of cats deploy
 rem  Userlogin is registered, and the edge node, the per machine
@@ -56,6 +64,18 @@ call :config
 if errorlevel 1 exit /b 2
 call :userlogin
 if errorlevel 1 exit /b 2
+call :installer
+if errorlevel 1 exit /b 2
+exit /b 0
+
+:installer
+powershell -noprofile -executionpolicy bypass -file "%hive_script%" -Fetch
+if errorlevel 1 (
+	echo [31mERROR     : the PaperCut Hive installer is not in C:\Admin\Installers and could not be downloaded [0m
+	echo [94mUSAGE     : the sign in script tries again at every sign in, or run cats prepare PaperCut.Hive again [0m
+	exit /b 2
+)
+echo [32mRECIPE    : the PaperCut Hive installer is in C:\Admin\Installers [0m
 exit /b 0
 
 :config
