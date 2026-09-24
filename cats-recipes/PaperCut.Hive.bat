@@ -11,6 +11,12 @@ set hive_config=C:\Admin\Others\papercut-hive.json
 set hive_userlogin=C:\Admin\Others\userlogin.bat
 set hive_script=%CATS_ROOT%\ps\papercut-hive.ps1
 
+if /I "%~1"=="install" (
+	call :install "%~2"
+	if errorlevel 1 exit /b 2
+	exit /b 0
+)
+
 if /I "%~1"=="prepare" (
 	call :prepare
 	if errorlevel 1 exit /b 2
@@ -18,6 +24,44 @@ if /I "%~1"=="prepare" (
 )
 
 exit /b 2
+
+rem ============================================================
+rem  install puts the edge node on the machine: the per machine
+rem  half of PaperCut Hive, which receives and releases the jobs.
+rem  It is an administrator's job and the recipe refuses to start
+rem  from a prompt that is not elevated.
+rem  It runs prepare first - the JSON, the sign in line and the
+rem  installer - unless it is given noprepare. The installation
+rem  itself is done by papercut-hive.ps1 -EdgeNode, with the
+rem  Region and SystemKey of the JSON: the key goes from the file
+rem  to the installer without crossing a cmd command line, and is
+rem  never written on the console.
+rem  A JSON that prepare has only just written is empty, so the
+rem  first install on a machine stops there: fill in the keys and
+rem  run it again. An edge node already there is left as it is.
+rem ============================================================
+
+:install
+net session >nul 2>&1
+if errorlevel 1 (
+	echo [31mERROR     : the PaperCut Hive edge node is installed by an administrator. Run this from an elevated prompt [0m
+	exit /b 2
+)
+
+if /I "%~1"=="noprepare" (
+	echo [36mRECIPE    : noprepare: the JSON, the sign in line and the installer are not checked [0m
+) else (
+	call :prepare
+	if errorlevel 1 exit /b 2
+)
+
+powershell -noprofile -executionpolicy bypass -file "%hive_script%" -EdgeNode
+if errorlevel 1 (
+	echo [31mERROR     : the PaperCut Hive edge node is not installed, the reason is on the lines above [0m
+	echo [94mUSAGE     : once the keys are in %hive_config%, run cats install PaperCut.Hive again [0m
+	exit /b 2
+)
+exit /b 0
 
 rem ============================================================
 rem  prepare readies a machine for the PaperCut Hive print client,

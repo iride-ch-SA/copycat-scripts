@@ -13,7 +13,8 @@
 #  whoami /upn has no answer, and it refuses to start.
 #  The edge node is the per machine half, installed elevated
 #  with /systemkey. It is a prerequisite and it is not installed
-#  here: without it the script stops. A user may be refused a
+#  here: without it the script stops, and -EdgeNode is what
+#  installs it, from an elevated prompt. A user may be refused a
 #  look at the service - Get-Service answers access denied, and
 #  as a terminating error - so it is looked for three ways, none
 #  of which can stop the script: the executable, the service key
@@ -68,9 +69,15 @@
 #                        missing, the CopyCats bucket
 #    -Timeout <seconds>  how long to wait for the client to
 #                        appear after the installer, 120
+#    -EdgeTimeout <s>    how long the edge node installer may
+#                        run, 600
 #    -Restart            restart the print client after linking
 #    -Fetch              only make sure the installer is there,
 #                        downloading it if it is not
+#    -EdgeNode           install the edge node instead, with the
+#                        Region and SystemKey of the JSON; needs an
+#                        elevated prompt, and does nothing if the
+#                        edge node is already there
 #
 #  Exit codes: 0 installed and linked, whether or not anything
 #  had to be done; 1 the edge node is not on this machine; 2 the
@@ -79,6 +86,16 @@
 #  installer is missing and the download failed; 7 the script
 #  runs as SYSTEM; 8 an unexpected error, named on the console.
 #  With -Fetch: 0 the installer is there, 6 the download failed.
+#  With -EdgeNode: 0 the edge node is there, installed now or
+#  before; 2 the installation failed; 5 and 6 as above; 9 the
+#  prompt is not elevated.
+#
+#  THE EDGE NODE INSTALLER MAY NOT END. PaperCut warns, in its
+#  MECM guide, that papercut-hive.exe can stay running after the
+#  edge node is installed, and says to stop it. So -EdgeNode
+#  does not wait for the process alone: once the edge node is
+#  there, an installer still running 30 seconds later is
+#  stopped, and that is not a failure.
 # ============================================================
 
 [CmdletBinding()]
@@ -87,15 +104,19 @@ param(
 	[string]$Installer = 'C:\Admin\Installers\papercut-hive.exe',
 	[string]$InstallerUrl = 'https://storage.googleapis.com/01931185-232c-77a5-8e67-8751490ebf3e/CopyCats/Admin/Installers/papercut-hive.exe',
 	[int]$Timeout = 120,
+	[int]$EdgeTimeout = 600,
 	[switch]$Restart,
-	[switch]$Fetch
+	[switch]$Fetch,
+	[switch]$EdgeNode
 )
 
 $ErrorActionPreference = 'Stop'
 
 function Write-Recipe([string]$text) { Write-Host ("RECIPE    : " + $text) -ForegroundColor Cyan }
 function Write-Done([string]$text)   { Write-Host ("RECIPE    : " + $text) -ForegroundColor Green }
+function Write-Warn([string]$text)   { Write-Host ("WARNING   : " + $text) -ForegroundColor Yellow }
 function Write-Fail([string]$text)   { Write-Host ("ERROR     : " + $text) -ForegroundColor Red }
+function Write-Plain([string]$text)  { Write-Host ("            " + $text) }
 
 trap {
 	Write-Fail "papercut-hive failed: $($_.Exception.Message) [line $($_.InvocationInfo.ScriptLineNumber)]"
@@ -149,9 +170,82 @@ function Test-EdgeNode {
 	return $false
 }
 
+# The JSON of the customer, with the keys a mode needs. Null, and said why, when
+# it is missing or one of those keys is empty
+function Read-Config([string[]]$required) {
+	if (-not (Test-Path -LiteralPath $Config)) {
+		Write-Fail "$Config is missing: it holds the keys of the customer"
+		Write-Plain 'it is written empty by cats prepare PaperCut.Hive, then filled in with Notepad'
+		return $null
+	}
+	$json = Get-Content -LiteralPath $Config -Raw | ConvertFrom-Json
+	$missing = $required | Where-Object { -not ([string]$json.$_).Trim() }
+	if ($missing) {
+		Write-Fail ("$Config has no value for " + ($missing -join ', '))
+		Write-Plain 'fill them in with Notepad, from the PaperCut Hive admin console'
+		return $null
+	}
+	return $json
+}
+
 if ($Fetch) {
 	if (Get-Installer) { exit 0 }
 	exit 6
+}
+
+# The edge node, per machine, from an elevated prompt
+if ($EdgeNode) {
+	$identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+	if (-not (New-Object Security.Principal.WindowsPrincipal $identity).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+		Write-Fail 'the PaperCut Hive edge node is installed from an elevated prompt'
+		exit 9
+	}
+	if (Test-EdgeNode) {
+		Write-Done 'the PaperCut Hive edge node is already on this machine, nothing to do'
+		exit 0
+	}
+	$cfg = Read-Config @('Region', 'SystemKey')
+	if (-not $cfg) { exit 5 }
+	if (-not (Get-Installer)) { exit 6 }
+
+	Write-Recipe 'Installing the PaperCut Hive edge node for this machine'
+	$arguments = "/VERYSILENT /region=`"$(([string]$cfg.Region).Trim())`" /systemKey=`"$(([string]$cfg.SystemKey).Trim())`""
+	$process = Start-Process -FilePath $Installer -ArgumentList $arguments -PassThru
+	$null = $process.Handle
+	$deadline = (Get-Date).AddSeconds($EdgeTimeout)
+	$seen = $null
+	$stopped = $false
+	while (-not $process.HasExited) {
+		if (Test-EdgeNode) {
+			if (-not $seen) { $seen = Get-Date }
+			elseif (((Get-Date) - $seen).TotalSeconds -ge 30) {
+				Write-Warn 'the installer was still running 30 seconds after the edge node was in place, and was stopped as PaperCut advises'
+				Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+				$stopped = $true
+				break
+			}
+		}
+		if ((Get-Date) -gt $deadline) {
+			Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+			Write-Fail "the installer did not end within $EdgeTimeout seconds, and was stopped"
+			exit 2
+		}
+		Start-Sleep -Seconds 2
+	}
+	if (-not $stopped -and $process.ExitCode -ne 0) {
+		Write-Fail "the installer answered $($process.ExitCode)"
+		exit 2
+	}
+	$deadline = (Get-Date).AddSeconds(60)
+	while (-not (Test-EdgeNode)) {
+		if ((Get-Date) -gt $deadline) {
+			Write-Fail 'the installer ended, and no edge node appeared within 60 seconds'
+			exit 2
+		}
+		Start-Sleep -Seconds 2
+	}
+	Write-Done 'PaperCut Hive edge node installed'
+	exit 0
 }
 
 # 0. Context: the user signing in, never SYSTEM
@@ -161,16 +255,8 @@ if ([Security.Principal.WindowsIdentity]::GetCurrent().User.Value -eq 'S-1-5-18'
 }
 
 # 0. The keys, from the file of the customer
-if (-not (Test-Path -LiteralPath $Config)) {
-	Write-Fail "$Config is missing: it holds the keys of the customer"
-	exit 5
-}
-$cfg = Get-Content -LiteralPath $Config -Raw | ConvertFrom-Json
-$missing = @('Region', 'OrgId', 'UserKey', 'SystemKey') | Where-Object { -not ([string]$cfg.$_).Trim() }
-if ($missing) {
-	Write-Fail ("$Config has no value for " + ($missing -join ', '))
-	exit 5
-}
+$cfg = Read-Config @('Region', 'OrgId', 'UserKey', 'SystemKey')
+if (-not $cfg) { exit 5 }
 $region    = ([string]$cfg.Region).Trim()
 $orgId     = ([string]$cfg.OrgId).Trim()
 $userKey   = ([string]$cfg.UserKey).Trim()
@@ -179,7 +265,8 @@ $systemKey = ([string]$cfg.SystemKey).Trim()
 # 0. The edge node, per machine, installed elevated elsewhere. The file is the
 # detection rule PaperCut gives for Intune
 if (-not (Test-EdgeNode)) {
-	Write-Fail 'the PaperCut Hive edge node is not on this machine: it is installed elevated, with /systemkey'
+	Write-Fail 'the PaperCut Hive edge node is not on this machine'
+	Write-Plain 'an administrator installs it with cats install PaperCut.Hive'
 	exit 1
 }
 
