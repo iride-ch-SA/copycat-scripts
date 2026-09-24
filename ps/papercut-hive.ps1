@@ -209,7 +209,8 @@ if ($EdgeNode) {
 	if (-not (Get-Installer)) { exit 6 }
 
 	Write-Recipe 'Installing the PaperCut Hive edge node for this machine'
-	$arguments = "/VERYSILENT /region=`"$(([string]$cfg.Region).Trim())`" /systemKey=`"$(([string]$cfg.SystemKey).Trim())`""
+	# The form the admin console gives for the edge node command
+	$arguments = "/VERYSILENT /region=$(([string]$cfg.Region).Trim()) /systemkey=`"$(([string]$cfg.SystemKey).Trim())`""
 	$process = Start-Process -FilePath $Installer -ArgumentList $arguments -PassThru
 	$null = $process.Handle
 	$deadline = (Get-Date).AddSeconds($EdgeTimeout)
