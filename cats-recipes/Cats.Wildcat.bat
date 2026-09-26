@@ -148,11 +148,38 @@ rem    cats clean Wildcat restart     ask for a restart and nothing else
 rem    cats clean Wildcat rechain     rewrite the rest of the chain from this file
 rem    cats clean Wildcat background  the wallpaper, and nothing else
 rem    cats clean Wildcat autologon on|off   the automatic logon
+rem
+rem  A Wild Cat can also be a virtual machine on Proxmox, and there
+rem  the VirtIO drivers are the disk, the network and the guest
+rem  agent the machine runs on. That is a chain of its own:
+rem
+rem    cats clean wildcat vm
+rem
+rem  the same chain without what is for real hardware only: the
+rem  virtio step, which would take out the drivers the machine
+rem  stands on, prepare Drivers infpack, which reads the catalogue
+rem  of a board a virtual machine does not have, and Intel DSA in
+rem  gpu, which finds nothing to look after behind an emulated
+rem  chipset. NVIDIA stays: a GPU passed through to the guest is a
+rem  real card and wants its driver.
+rem
+rem  And because typing the plain form on a virtual machine is the
+rem  easy mistake, virtio and gpu look for themselves: on a QEMU
+rem  or KVM machine virtio refuses and removes nothing, gpu skips
+rem  Intel DSA, and opening the plain chain says which form was
+rem  meant. The chain is not switched for the operator - which one
+rem  runs is what was typed.
 rem ============================================================
 
 set WC_HEAD=clean Wildcat autologon on+install Drivers+update Scripts+clean Wildcat restart+clean Wildcat rechain
 set WC_TAIL=clean Wildcat virtio+prepare Drivers infpack yes+clean Wildcat gpu+clean Wildcat restart+install Drivers+update Windows+install Drivers+clean Microsoft.Windows+prepare Machine+create Machine+clean Wildcat background+clean Wildcat autologon off
 set WC_CHAIN=%WC_HEAD%+%WC_TAIL%
+
+rem  The chain of a Wild Cat that stays a virtual machine, see above. Same
+rem  halves, same reasons; rechain vm is what keeps the tail on this form
+set WC_HEAD_VM=clean Wildcat autologon on+install Drivers+update Scripts+clean Wildcat restart+clean Wildcat rechain vm
+set WC_TAIL_VM=clean Wildcat gpu+clean Wildcat restart+install Drivers+update Windows+install Drivers+clean Microsoft.Windows+prepare Machine+create Machine+clean Wildcat background+clean Wildcat autologon off
+set WC_CHAIN_VM=%WC_HEAD_VM%+%WC_TAIL_VM%
 
 if /I "%~1"=="clean" (
 
@@ -213,7 +240,11 @@ if /I "%~1"=="clean" (
 		rem  written over. Same chain when nothing changed, which is the ordinary
 		rem  case and costs a line of console
 		echo [36mRECIPE    : Writing the rest of the chain again, from the recipes this machine has now [0m
-		call "%CATS_HOME%\cats-resume.bat" rechain "%WC_TAIL%"
+		if /I "%~3"=="vm" (
+			call "%CATS_HOME%\cats-resume.bat" rechain "%WC_TAIL_VM%"
+		) else (
+			call "%CATS_HOME%\cats-resume.bat" rechain "%WC_TAIL%"
+		)
 		if errorlevel 2 (
 			echo [33mWARNING   : the chain was left as it was, the lines above say why [0m
 			exit /b 0
@@ -236,7 +267,15 @@ if /I "%~1"=="clean" (
 		rem  software out; the driver packages it left staged in the machine
 		rem  driver store are pnputil's, and uninstalling a program has never
 		rem  removed them. On real hardware nothing binds them and they are
-		rem  inert, but "the guest drivers are out" is either true or it is not
+		rem  inert, but "the guest drivers are out" is either true or it is not.
+		rem  On a virtual machine they are the disk and the network it runs on,
+		rem  so there the step refuses, whatever chain or hand typed it
+		call :is_vm
+		if /I "!WC_VM!"=="yes" (
+			echo [33mWARNING   : this is a virtual machine, and the VirtIO drivers are what it runs on: nothing was removed [0m
+			echo [94mUSAGE     : cats clean Wildcat vm is the chain for a Wild Cat that stays a virtual machine [0m
+			exit /b 0
+		)
 		echo [36mRECIPE    : Removing the VirtIO guest software of the Proxmox image [0m
 		winget uninstall RedHat.VirtIO --accept-source-agreements
 
@@ -260,10 +299,17 @@ if /I "%~1"=="clean" (
 	if /I "%~2"=="gpu" (
 		rem cats install passes the *next package* on the command line as an
 		rem argument, so the CPU and the GPU are detected here instead of asking
-		rem inteldasa or Nvidia to work it out from an argument that is not theirs
+		rem inteldasa or Nvidia to work it out from an argument that is not theirs.
+		rem On a virtual machine the processor is the host's and the chipset is
+		rem emulated, so Intel DSA would have nothing to look after; a GPU passed
+		rem through is a real card, so NVIDIA is looked for all the same
+		call :is_vm
 		set WC_INTEL=no
 		for /f "delims=" %%i in ('powershell -noprofile -command "if ((Get-CimInstance Win32_Processor).Manufacturer -match 'Intel') { 'yes' } else { 'no' }"') do set WC_INTEL=%%i
-		if /I "!WC_INTEL!"=="yes" (
+		if /I "!WC_VM!"=="yes" set WC_INTEL=vm
+		if /I "!WC_INTEL!"=="vm" (
+			echo [36mRECIPE    : Virtual machine, skipping Intel Driver and Support Assistant [0m
+		) else if /I "!WC_INTEL!"=="yes" (
 			echo [36mRECIPE    : Intel CPU found, installing Intel Driver and Support Assistant [0m
 			call "%CATS_HOME%\cats-install.bat" inteldasa
 		) else (
@@ -282,9 +328,11 @@ if /I "%~1"=="clean" (
 		exit /b 0
 	)
 
-	if not "%~2"=="" (
+	set "WC_FORM="
+	if /I "%~2"=="vm" set "WC_FORM=vm"
+	if not "%~2"=="" if not defined WC_FORM (
 		echo [31mERROR     : Wildcat has no step called %~2 [0m
-		echo [94mUSAGE     : cats clean Wildcat, or one step of it: virtio, gpu, restart, rechain, background, autologon [0m
+		echo [94mUSAGE     : cats clean Wildcat, cats clean Wildcat vm, or one step of it: virtio, gpu, restart, rechain, background, autologon [0m
 		exit /b 2
 	)
 
@@ -300,13 +348,31 @@ if /I "%~1"=="clean" (
 		call "%CATS_HOME%\cats-update.bat" Scripts
 		set "CATS_HOME="
 		set "CATS_SCRIPTS_PULLED="
-		call "%CATS_ROOT%\cats.bat" clean Wildcat
+		call "%CATS_ROOT%\cats.bat" clean Wildcat !WC_FORM!
 		exit /b !errorlevel!
 	)
 
-	echo [36mRECIPE    : Turning this machine into a Wild Cat: %WC_CHAIN% [0m
+	rem  Same origin for both forms: opening one over what is left of the other
+	rem  replaces it without a question, as opening the same chain again does
+	if /I "!WC_FORM!"=="vm" (
+		set "WC_CHAIN=%WC_CHAIN_VM%"
+		echo [36mRECIPE    : A Wild Cat that stays a virtual machine: the VirtIO drivers stay where they are [0m
+		call :is_vm
+		if /I not "!WC_VM!"=="yes" (
+			echo [33mWARNING   : this does not look like a virtual machine, and the VirtIO packages will stay in its driver store [0m
+			echo [94mUSAGE     : cats clean Wildcat, without vm, is the one for real hardware [0m
+		)
+	) else (
+		call :is_vm
+		if /I "!WC_VM!"=="yes" (
+			echo [33mWARNING   : this is a virtual machine, and the chain below is the one for real hardware [0m
+			echo [94mUSAGE     : cats clean Wildcat vm is the one for a virtual machine. The virtio step refuses here all the same [0m
+		)
+	)
+
+	echo [36mRECIPE    : Turning this machine into a Wild Cat: !WC_CHAIN! [0m
 	echo [94mUSAGE     : it restarts on its own where it has to and signs itself back in: it needs nobody until it is done [0m
-	call "%CATS_HOME%\cats-resume.bat" open "clean Wildcat" "%WC_CHAIN%"
+	call "%CATS_HOME%\cats-resume.bat" open "clean Wildcat" "!WC_CHAIN!"
 	if errorlevel 2 (
 		echo [31mERROR     : the chain was not started, the lines above say why [0m
 		exit /b 2
@@ -317,3 +383,16 @@ if /I "%~1"=="clean" (
 )
 
 exit /b 2
+
+rem ============================================================
+rem  is_vm sets WC_VM to yes on a QEMU or KVM virtual machine -
+rem  what Proxmox runs - and to no everywhere else. Proxmox says
+rem  so in the SMBIOS it hands the guest, unless somebody wrote
+rem  other values into it by hand: manufacturer QEMU, model
+rem  Standard PC. A machine it misses is taken for real hardware,
+rem  which is what this recipe did before it looked.
+rem ============================================================
+:is_vm
+set WC_VM=no
+for /f "delims=" %%i in ('powershell -noprofile -command "$c = Get-CimInstance Win32_ComputerSystem; if (($c.Manufacturer -match 'QEMU') -or ($c.Model -match 'QEMU|KVM|Standard PC')) { 'yes' } else { 'no' }"') do set WC_VM=%%i
+exit /b 0
