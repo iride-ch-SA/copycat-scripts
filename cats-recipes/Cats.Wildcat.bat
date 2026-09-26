@@ -299,6 +299,7 @@ if /I "%~1"=="clean" (
 		echo [36mRECIPE    : Pulling the recipes before the chain is written down [0m
 		call "%CATS_HOME%\cats-update.bat" Scripts
 		set "CATS_HOME="
+		set "CATS_SCRIPTS_PULLED="
 		call "%CATS_ROOT%\cats.bat" clean Wildcat
 		exit /b !errorlevel!
 	)

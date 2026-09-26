@@ -40,6 +40,11 @@ if "%~2"=="" (
 )
 
 :verbs
+:: How deep this run is: cats calls cats - a chain step, a recipe that
+:: refreshes itself - and only the outermost run may offer to close the
+:: window. Counted after the checks above, whose exits skip the count
+set /a CATS_DEPTH+=1
+
 :: Accept winget source agreements on the first run of this user
 call "%CATS_HOME%\cats-winget-accept.bat"
 
@@ -85,5 +90,34 @@ if /I "%~1"=="backup" (
 	call "%CATS_HOME%\cats-backup.bat" %2 %3 %4 %5 %6 %7 %8 %9
 )
 
+set /a CATS_DEPTH-=1
+
 echo [92mDONE     [96m : CopyCat Scripts[0m
+if %CATS_DEPTH% GTR 0 exit /b 0
+if defined CATS_SCRIPTS_PULLED call :stale
+exit /b 0
+
+:: cats update Scripts pulled while this run read its shadow copy, and
+:: this window keeps pointing CATS_HOME at that copy: every cats typed
+:: here from now on runs the code as it was before the pull. Closing is
+:: the answer that needs nothing but Enter. Only a window someone types
+:: into is asked: a cmd started with /c - the resume task, a cats run
+:: from PowerShell - ends with the run and holds no copy afterwards
+:stale
+set "CATS_SCRIPTS_PULLED="
+setlocal enabledelayedexpansion
+set "STALE_CMD=!CMDCMDLINE!"
+if /I not "!STALE_CMD:/c=!"=="!STALE_CMD!" (
+	endlocal
+	exit /b 0
+)
+echo.
+echo [33mWARNING   : this window still runs the copy of cats taken before the update, not the updated one[0m
+echo [33mWARNING   : any cats typed here would run the old code: close it and open a new window[0m
+set "STALE_ANSWER="
+set /p "STALE_ANSWER=Close this window now? [Y/n] "
+if not defined STALE_ANSWER exit
+if /I not "!STALE_ANSWER:~0,1!"=="n" exit
+echo [33mWARNING   : window kept open, on the copy before the update[0m
+endlocal
 exit /b 0
