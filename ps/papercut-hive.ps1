@@ -55,10 +55,13 @@
 #  writes data\config\userclient.ident; that file is how this
 #  script tells a linked client from one that is not. PaperCut
 #  documents that a running client picks the link up only after
-#  a restart; in practice the link was seen to take effect
-#  without one, so the restart is not done unless -Restart is
-#  given, and then it is done the way PaperCut documents it:
-#  stop pc-print-client, start pc-print-client.exe.
+#  a restart, so once the link is written the client is
+#  restarted the way PaperCut documents it: stop pc-print-client,
+#  start pc-print-client.exe. Without the restart the tray may
+#  show the user as connected while the first print still opens
+#  the sign-in page of the client on 127.0.0.1, the
+#  authenticate on print of an unlinked client: seen in the
+#  field. -NoRestart leaves the client alone.
 #
 #  Parameters:
 #    -Config <path>      the JSON with the keys,
@@ -71,7 +74,8 @@
 #                        appear after the installer, 120
 #    -EdgeTimeout <s>    how long the edge node installer may
 #                        run, 600
-#    -Restart            restart the print client after linking
+#    -NoRestart          do not restart the print client after
+#                        linking
 #    -Fetch              only make sure the installer is there,
 #                        downloading it if it is not
 #    -EdgeNode           install the edge node instead, with the
@@ -105,7 +109,7 @@ param(
 	[string]$InstallerUrl = 'https://storage.googleapis.com/01931185-232c-77a5-8e67-8751490ebf3e/CopyCats/Admin/Installers/papercut-hive.exe',
 	[int]$Timeout = 120,
 	[int]$EdgeTimeout = 600,
-	[switch]$Restart,
+	[switch]$NoRestart,
 	[switch]$Fetch,
 	[switch]$EdgeNode
 )
@@ -321,8 +325,12 @@ if (-not (Wait-File $ident 30)) {
 	Write-Fail "the link failed: link-with-email answered $code and $ident was not written"
 	exit 4
 }
+if ($code -ne 0) {
+	Write-Warn "link-with-email answered $code, and $ident was written all the same"
+}
 
-if ($Restart) {
+# The running client picks the link up only after a restart, PaperCut says
+if (-not $NoRestart) {
 	Write-Recipe 'Restarting the print client'
 	Get-Process -Name 'pc-print-client' -ErrorAction SilentlyContinue | Stop-Process -Force
 	Start-Sleep -Seconds 2
