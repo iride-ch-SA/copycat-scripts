@@ -19,7 +19,8 @@ trap {
 #  set-user-password.ps1
 #  Sets the password of a local user without ever putting it on
 #  a command line, where any process listing would show it.
-#    -mode random : a new password is generated and displayed
+#    -mode random : a new password is generated and displayed,
+#                   under the host name of the machine
 #    -mode ask    : the password is typed, never echoed
 #    -create      : the account is created instead of updated
 #  The account is always left enabled and with no expiration.
@@ -219,10 +220,27 @@ $account = Get-LocalUser -Name $username
 Write-Host ("Enabled: {0}   Account expires: {1}" -f $account.Enabled, $(if ($null -eq $account.AccountExpires) { "never" } else { $account.AccountExpires }))
 
 if ($generated) {
+	# The host name goes above the password, so the two can be copied into the password
+	# manager together. It is the name the machine will have at the next restart, read
+	# where Windows keeps it, as set-autologon.ps1 does: %COMPUTERNAME% still carries the
+	# old one after a rename, and the entry would be filed under a machine that is gone.
+	$hostname = $env:COMPUTERNAME
+	try {
+		$key = 'HKLM:\SYSTEM\CurrentControlSet\Control\ComputerName\ComputerName'
+		$pending = (Get-ItemProperty -Path $key -Name 'ComputerName' -ErrorAction Stop).ComputerName
+		if ($pending) { $hostname = [string]$pending }
+	} catch {
+		# No pending name to read is not a failure: the running name is the answer
+	}
+
 	Write-Host ""
+	Write-Host "  $hostname"
 	Write-Host "  $generated" -ForegroundColor Green
 	Write-Host ""
-	Write-Host "Copy it into the password manager now. It is shown once and stored nowhere." -ForegroundColor Yellow
+	if ($hostname -ne $env:COMPUTERNAME) {
+		Write-Host "The machine is still $($env:COMPUTERNAME): $hostname is its name after the next restart." -ForegroundColor Yellow
+	}
+	Write-Host "Copy both into the password manager now. The password is shown once and stored nowhere." -ForegroundColor Yellow
 	[void](Read-Host "Press Enter once it is saved")
 	Clear-Host
 	Write-Host "Password of $username changed. The console has been cleared."
