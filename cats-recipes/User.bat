@@ -228,6 +228,40 @@ if /I "%~1"=="prepare" (
 	exit /b 1
 )
 
+if /I "%~1"=="remove" (
+	if "%~2"=="" (
+		echo [31mERROR     : You must specify a username as second parameter [0m
+		exit /b 1
+	)
+
+	rem The third word says what happens to the profile, and without it the
+	rem helper asks: delete-profile deletes it, keep-profile keeps the folder
+	rem on disk, neither of them asking. The name and the choice travel in the
+	rem environment, read by PowerShell when it runs, so a quote or a space in
+	rem the name cannot reach its parser. What is removed, and what is not,
+	rem depends on where the account lives: see ps\remove-user.ps1
+	set "CATS_MEMBER=%~2"
+	set "CATS_PROFILE=ask"
+	if /I "%~3"=="delete-profile" set "CATS_PROFILE=delete"
+	if /I "%~3"=="keep-profile" set "CATS_PROFILE=keep"
+	if not "%~3"=="" (
+		if /I not "%~3"=="delete-profile" (
+			if /I not "%~3"=="keep-profile" (
+				echo [31mERROR     : The third parameter must be delete-profile or keep-profile [0m
+				exit /b 1
+			)
+		)
+	)
+	echo [36mRECIPE    : Removing %~2 from this machine [0m
+	powershell -noprofile -executionpolicy bypass -command "& %CATS_ROOT%\ps\remove-user.ps1 -username $env:CATS_MEMBER -ProfileMode $env:CATS_PROFILE; exit $LASTEXITCODE"
+	if errorlevel 2 (
+		echo [33mWARNING   : the account was removed in part, see above [0m
+		exit /b 2
+	)
+	if errorlevel 1 exit /b 1
+	exit /b 0
+)
+
 exit /b 2
 
 rem ============================================================
