@@ -147,6 +147,37 @@ if /I "%~1"=="clean" (
 		exit /b
 	)
 
+	rem keep-downloads and clear-downloads can be typed in the slot of the
+	rem password or after it, so the first form is turned into the second:
+	rem the option goes to the fourth slot, the password keyword - random
+	rem when none was typed - to the third, and the recipe is called again.
+	rem Anything else after the option is refused, not reordered: two
+	rem options together would otherwise be swapped back and forth for ever
+	for %%o in (keep-downloads clear-downloads) do if /I "%~3"=="%%o" (
+		if "%~4"=="" (
+			call "%~f0" clean "%~2" random %%o
+			exit /b
+		)
+		if /I "%~4"=="ask" (
+			call "%~f0" clean "%~2" ask %%o
+			exit /b
+		)
+		if /I "%~4"=="random" (
+			call "%~f0" clean "%~2" random %%o
+			exit /b
+		)
+		echo [31mERROR     : %%o can be followed by ask or random only [0m
+		exit /b 1
+	)
+	if not "%~4"=="" (
+		if /I not "%~4"=="keep-downloads" (
+			if /I not "%~4"=="clear-downloads" (
+				echo [31mERROR     : The fourth parameter must be keep-downloads or clear-downloads [0m
+				exit /b 1
+			)
+		)
+	)
+
 	if /I "%~3"=="ask" (
 		echo [36mRECIPE    : Password typed without being shown, account enabled and without expiration date [0m
 		powershell -noprofile -executionpolicy bypass -command "& %CATS_ROOT%\ps\set-user-password.ps1 '%~2' ask; exit $LASTEXITCODE"
@@ -155,7 +186,8 @@ if /I "%~1"=="clean" (
 			exit /b 3
 		)
 		if errorlevel 1 exit /b 1
-		exit /b 0
+		call :downloads "%~2" "%~4"
+		exit /b
 	)
 
 	if /I "%~3"=="random" (
@@ -166,7 +198,8 @@ if /I "%~1"=="clean" (
 			exit /b 3
 		)
 		if errorlevel 1 exit /b 1
-		exit /b 0
+		call :downloads "%~2" "%~4"
+		exit /b
 	)
 
 	echo [31mERROR     : The third parameter must be ask or random [0m
@@ -196,6 +229,40 @@ if /I "%~1"=="prepare" (
 )
 
 exit /b 2
+
+rem ============================================================
+rem  cats clean itadmin - and cats clean User itadmin, which is
+rem  the same command - also empties the Downloads folder of
+rem  itadmin once the password is set: what was downloaded while
+rem  the machine was prepared would otherwise leave with it.
+rem  It asks first, y or n; keep-downloads leaves the folder as it
+rem  is and clear-downloads empties it, neither of them asking.
+rem  The folder is read from HKCU, so it is emptied only when the
+rem  command is run BY itadmin: ps\clear-downloads.ps1 compares
+rem  %USERNAME% with the account, and run by anybody else it
+rem  touches nothing and asks nothing. No other account has its
+rem  Downloads folder emptied by cats clean User.
+rem  The password is set either way, so a folder that is not
+rem  emptied is a warning and an exit code 2, not a failure.
+rem ============================================================
+
+:downloads
+if /I not "%~1"=="itadmin" (
+	if not "%~2"=="" echo [33mWARNING   : %~2 is about the Downloads folder of itadmin, and is ignored for %~1 [0m
+	exit /b 0
+)
+if /I "%~2"=="keep-downloads" (
+	echo [36mRECIPE    : The Downloads folder of itadmin is left as it is [0m
+	exit /b 0
+)
+set "UD_MODE=ask"
+if /I "%~2"=="clear-downloads" set "UD_MODE=yes"
+powershell -noprofile -executionpolicy bypass -command "& %CATS_ROOT%\ps\clear-downloads.ps1 -Account itadmin -Mode %UD_MODE%; exit $LASTEXITCODE"
+if errorlevel 2 (
+	echo [33mWARNING   : the password is set, the Downloads folder is not empty, see above [0m
+	exit /b 2
+)
+exit /b 0
 
 rem ============================================================
 rem  hide and show write, and remove, the value an account has

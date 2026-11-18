@@ -104,11 +104,15 @@ for %%a in (%*) do (
 		)
 	)
 	
+	rem  cats clean itadmin is cats clean User itadmin under a shorter
+	rem  name, and takes the same words after it: ask or random for the
+	rem  password, then keep-downloads or clear-downloads for the
+	rem  Downloads folder of itadmin, see cats-recipes\User.bat
 	if /I "%%a"=="itadmin" (
 		if /I not "%~1"=="User" (
-			echo [36mSHORTCUT  : New random password for the itadmin account [0m
+			echo [36mSHORTCUT  : New random password for the itadmin account, then its Downloads folder [0m
 			if exist "%CATS_HOME%\cats-recipes\User.bat" (
-				call "%CATS_HOME%\cats-recipes\User.bat" clean itadmin "%~2"
+				call "%CATS_HOME%\cats-recipes\User.bat" clean itadmin "%~2" "%~3"
 			)
 		)
 	)
