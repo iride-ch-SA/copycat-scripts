@@ -224,7 +224,21 @@ if /I "%~1"=="prepare" (
 		exit /b 0
 	)
 
-	echo [31mERROR     : You must specify show or hide as third parameter [0m
+	rem rdp and no-rdp give and take the membership of Remote Desktop
+	rem Users, the same group cats create User hands out, to an account
+	rem that exists already: a local one, a domain one, a tenant 365 one
+	rem given by its UPN. See :rdp below
+	if /I "%~3"=="rdp" (
+		call :rdp "%~2" add
+		exit /b
+	)
+
+	if /I "%~3"=="no-rdp" (
+		call :rdp "%~2" remove
+		exit /b
+	)
+
+	echo [31mERROR     : You must specify show, hide, rdp or no-rdp as third parameter [0m
 	exit /b 1
 )
 
@@ -336,4 +350,46 @@ if /I "%UV_ACTION%"=="show" (
 
 echo [36mRECIPE    : Hiding %UV_NAME% from the sign-in screen [0m
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts\UserList" /t REG_DWORD /f /d 0 /v "%UV_NAME%"
+exit /b 0
+
+rem ============================================================
+rem  rdp and no-rdp put an account that already exists into
+rem  Remote Desktop Users, S-1-5-32-555, or take it out. The
+rem  account may live anywhere the machine can translate it: a
+rem  local name, DOMAIN\user, a tenant 365 account by its UPN -
+rem  ps\lib-account.ps1 puts AzureAD\ in front of it - which is
+rem  the same cascade cats prepare WireGuard goes through.
+rem  The group is named by SID, its name is translated on a
+rem  localised Windows, and the helper reads it back either way.
+rem  The membership is all this does: Remote Desktop itself is
+rem  turned on or off in Settings or by group policy, and no
+rem  recipe touches it, so
+rem  after rdp the switch is only read, and a machine that has it
+rem  off is a warning - the account is a member, nobody connects.
+rem  The membership enters the token at the next sign-in.
+rem ============================================================
+
+:rdp
+set "CATS_MEMBER=%~1"
+if /I "%~2"=="remove" (
+	echo [36mRECIPE    : Taking %~1 out of the Remote Desktop Users group [0m
+	powershell -noprofile -executionpolicy bypass -command "& %CATS_ROOT%\ps\set-localgroup-member.ps1 -username $env:CATS_MEMBER -sid S-1-5-32-555 -remove; exit $LASTEXITCODE"
+	if errorlevel 2 exit /b 2
+	exit /b 0
+)
+
+echo [36mRECIPE    : Adding %~1 to the Remote Desktop Users group [0m
+powershell -noprofile -executionpolicy bypass -command "& %CATS_ROOT%\ps\set-localgroup-member.ps1 -username $env:CATS_MEMBER -sid S-1-5-32-555; exit $LASTEXITCODE"
+if errorlevel 2 exit /b 2
+
+rem A group policy that sets the switch wins over Settings, so its value
+rem is the one read when there is one
+set "UR_KEY=HKLM\SYSTEM\CurrentControlSet\Control\Terminal Server"
+reg query "HKLM\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services" /v fDenyTSConnections >nul 2>nul
+if not errorlevel 1 set "UR_KEY=HKLM\SOFTWARE\Policies\Microsoft\Windows NT\Terminal Services"
+reg query "%UR_KEY%" /v fDenyTSConnections 2>nul | find /i "0x1" >nul
+if not errorlevel 1 (
+	echo [33mWARNING   : Remote Desktop is turned off on this machine: %~1 is a member, but cannot connect until it is turned on - Settings, System, Remote Desktop, or the group policy that turns it off [0m
+	exit /b 2
+)
 exit /b 0

@@ -2,6 +2,7 @@
 param(
 	[string]$username,
 	[string]$sid,
+	[switch]$remove,
 	[switch]$quiet
 )
 
@@ -15,10 +16,12 @@ trap {
 # ============================================================
 #  set-localgroup-member.ps1
 #  Adds an account to a built-in local group named by its SID,
-#  and proves the membership by reading the group back.
+#  or takes it out with -remove, and proves the membership - or
+#  its absence - by reading the group back.
 #    -username <name> : a local name, DOMAIN\user, or an Entra
 #                       account as AzureAD\user@tenant
 #    -sid <S-1-5-32-x>: the group, always by SID
+#    -remove          : take the account out instead of adding it
 #    -quiet           : only problems are printed
 #  The group is resolved by SID and never by name, because the
 #  built-in groups are translated on a localised Windows: Users
@@ -29,7 +32,8 @@ trap {
 #  Exit codes: 0 the account is a member - added now, or already
 #  was - and 2 for any error. An account that is already in the
 #  group is not a failure: the caller asks for a membership, not
-#  for a change.
+#  for a change. With -remove the same holds the other way round:
+#  0 when the account is not a member, taken out now or never in.
 # ============================================================
 
 # The cascade that turns a typed name into a SID is shared with the other
@@ -100,6 +104,46 @@ if (-not $target) {
 
 if ($target.Name -ne $username) {
 	Write-Recipe ("'" + $username + "' resolved as " + $target.Name)
+}
+
+if ($remove) {
+	if (-not ((Get-GroupMemberSid $group) -contains $target.Sid.Value)) {
+		Write-Recipe ($target.Name + " is not a member of " + $group.Name)
+		exit 0
+	}
+
+	$problems = @()
+
+	# The same ways as remove-user.ps1 takes a member out, and net localgroup
+	# last as on the way in: the cmdlet by SID, then the WinNT provider, which
+	# takes a member by its SID too, then the name LookupAccountName translates
+	Try {
+		Remove-LocalGroupMember -SID $group.SID -Member $target.Sid.Value -ErrorAction Stop
+	} Catch {
+		$problems += ("Remove-LocalGroupMember: " + $_.Exception.Message)
+		Try {
+			$adsi = [ADSI]("WinNT://./" + $group.Name + ",group")
+			$adsi.Remove("WinNT://" + $target.Sid.Value)
+		} Catch {
+			$problems += ("WinNT: " + $_.Exception.Message)
+			$output = (& net localgroup $group.Name $target.Name /delete 2>&1 | Out-String)
+			if ($LASTEXITCODE -ne 0) {
+				$problems += ("net localgroup: " + ($output -replace '\s+', ' ').Trim())
+			}
+		}
+	}
+
+	# Read back whichever way answered: the account is out only if the group says so
+	if (-not ((Get-GroupMemberSid $group) -contains $target.Sid.Value)) {
+		Write-Recipe ($target.Name + " is no longer a member of " + $group.Name) "Green"
+		exit 0
+	}
+
+	# A removal that answered without error and changed nothing has no message of
+	# its own to show, so the read-back is what is reported
+	if (-not $problems) { $problems = @("the removal answered without error, reading the group back still shows it") }
+	Write-Problem "ERROR" ("'" + $target.Name + "' is still a member of " + $group.Name + ": " + ($problems -join ' | ')) "Red"
+	exit 2
 }
 
 if ((Get-GroupMemberSid $group) -contains $target.Sid.Value) {
