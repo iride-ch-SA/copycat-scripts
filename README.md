@@ -58,7 +58,7 @@ in the dispatcher but are **not implemented**.
 |---|---|---|
 | [`install`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-install) | Installs a recipe, a shortcut, or any winget package name | `cats install Cats.Base`, `cats install TeamViewerQS`, `cats install 7zip.7zip` |
 | [`update`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-update) | Updates the scripts, Office, winget packages and Windows | `cats update Scripts`, `cats update Windows` |
-| [`prepare`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-prepare) | Prepares folders, PATH, utilities, users and the machine name | `cats prepare AdminFolders`, `cats prepare WireGuard users`, `cats prepare Machine` |
+| [`prepare`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-prepare) | Prepares folders, PATH, utilities, users and the machine name | `cats prepare AdminFolders`, `cats prepare WireGuard users`, `cats prepare User mario@contoso.com rdp`, `cats prepare Machine` |
 | [`create`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-create) | Creates local users and the hardware identifier | `cats create Admin mario`, `cats create Machine` |
 | [`deploy`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-deploy) | Registers what has to keep running on the machine, and gets it ready for the tenant it joins | `cats deploy Userlogin`, `cats deploy Tenant365` |
 | [`clean`](https://github.com/iride-ch-SA/copycat-scripts/wiki/cats-clean) | Disk cleanup and volume retrim, logs and temporaries, sfc, DISM, network reset, password reset, software removal | `cats clean disks`, `cats clean tmp`, `cats clean Machine`, `cats clean itadmin`, `cats clean Microsoft.Teams`, `cats clean Microsoft.Windows` |
