@@ -77,7 +77,7 @@ Passwords are never typed on the command line: `cats create`, `cats clean User` 
 
 ### Recipes
 
-`Adobe.Acrobat.Reader`, `BgInfo`, `Cats.AdminFolders`, `Cats.Base`, `Cats.Scripts`, `Cats.Utils`,
+`Adobe.Acrobat.Reader`, `BgInfo`, `Brother.LabelPrinter`, `Cats.AdminFolders`, `Cats.Base`, `Cats.Scripts`, `Cats.Utils`,
 `Cats.Wildcat`, `Drivers`, `G360.Support`, `Google.GWSMO`, `HPSA9`, `LibreOffice`, `Machine`,
 `Microsoft.Office`, `Microsoft.Teams`, `Microsoft.Windows`, `Microsoft.WindowsApp`, `Nvidia`, `OnlyOffice`, `PaperCut.Hive`, `TeamViewerQS`, `Tenant365`, `User`, `Userlogin`,
 `WireGuard`. One page each in the
